@@ -1,34 +1,59 @@
-# dataherd-raika
+# 🐺dataherd-raika🐺
+
+"Dataherd-raika는 대규모 사용자 행동 데이터셋을 시뮬레이션하기 위해 설계된 최신 라이브러리입니다. 하나의 사용자 이벤트(예: 클릭 또는 키워드 입력)를 취하여 간단한 확률 분포와 사용자 정의 변수를 적용, 광범위한 데이터셋으로 확장합니다."
 
 "Dataherd-Raika is a cutting-edge library designed to simulate large-scale user behavior datasets. It takes a single user event (like a click or keyword input) and, by applying simple probability distributions and custom variables, expands it into a vast dataset."
 
-
-## 사용법 및 예상 결과
+## 🐺사용법 및 예상 결과 : How to Use and Expected Results🐺
 
 ### 1. 시작 및 종료 시간 설정
+### 1. Setting Start and End Time
 
 ```javascript
 setTimestampRange(new Date('2024-01-01T00:00:00'), new Date('2024-01-01T08:00:00'));
 ```
 
-이 함수는 이벤트 타임스탬프를 생성할 때 사용되는 시간 범위를 설정합니다.
-2024-01-01 자정 ~ 오전 8시 사이의 랜덤한 타임스탬프를 생성하고 싶다면, 위 코드처럼 설정하면 됩니다.
+- 이 함수는 이벤트 타임스탬프를 생성할 때 사용되는 시간 범위를 설정합니다. 2024-01-01 자정 ~ 오전 8시 사이의 랜덤한 타임스탬프를 생성하고 싶다면, 위 코드처럼 설정하면 됩니다.
+- This function sets the time range used for generating event timestamps. To create random timestamps between midnight and 8 AM on 2024-01-01, set it as shown in the code above.
 
-
-### 2. 특정 키워드 생성 & 검색 횟수 조정
+### 2. 클릭 이벤트 & 특정 키워드 이벤트 횟수 조정
+### 2. Adjusting Click Event & Specific Keyword Event Counts
 
 ```javascript
 setUserClickCount(3);
 setUserKeywordCount(3);
 ```
 
-이 함수들은 사용자가 클릭하거나 키워드를 생성/검색할 때마다 적용되는 카운트, 만들어지는 데이터 수를 설정합니다.
+- 이 함수들은 사용자가 클릭하거나, 키워드를 생성/검색할 때마다, 적용되는 카운트, 만들어지는 데이터 수를 설정합니다.
+- These functions set the count of data generated each time a user clicks or creates/searches a keyword.
 
+### 3. 커스텀 데이터 설정
+### 3. Setting Custom Data
 
-### 3. 전역 커스텀 데이터 설정
+```typescript
+//커스텀 데이터 항목 타입, Custom data type
+export type UserDefinedItem = {
+    name: string; //항목명: 데이터 항목 이름을 정합니다., Item Name: Set the name of the data item.
+    type: 'number' | 'string' | 'boolean' | 'array' | 'object'; //타입: 숫자 / 문자 / boolean / 배열 / 객체, Type: Number / String / Boolean / Array / Object
+    distribution?: 'uniform' | 'normal'; //number: 확률 분포 타입: uniform: 완전 랜덤, normal: 정규 분포(가우스 분포), Distribution Type: Uniform: Completely random, Normal: Gaussian distribution
+    mean?: number;  //number: normal: 평균값 설정 (디폴트: 중간값), Mean: Set the average value (default: median)
+    standardDeviation?: number; //number: normal: 표준편차 설정 (디폴트: 6시그마), Standard Deviation: Set the standard deviation (default: 6 sigma)
+    options?: number | string | number[] | string[] | UserDefinedItem[] | object; //options의 타입을 명시적으로 정의, Explicitly define the type of options
+    randomizeArrays?: boolean; //배열 항목의 랜덤 선택 여부 (디폴트: false), Whether to randomly select array items (default: false)
+    randomizeObjects?: boolean; //객체 항목의 랜덤 선택 여부 (디폴트: false), Whether to randomly select object items (default: false)
+    selectionProbability?: boolean; //'문자열 그룹', '배열', '객체' 항목의 랜덤 선택 시, 특정 항목(들)이 선택될 확률 조정 여부 (디폴트: false), Adjust the probability of selecting certain items during random selection of 'string group', 'array', 'object' items (default: false)
+    probabilitySetting?: ProbabilitySetting[]; // selectionProbability: true일 시, 특정 항목(들)의 확률 설정, When selectionProbability is true, set the probability of specific items
+    arraySelectionCount?: number; //배열에서 선택할 항목 수 (디폴트: 1), Number of items to select from an array (default: 1)
+    objectSelectionCount?: number; //객체에서 선택할 항목 수 (디폴트: 1), Number of items to select from an object (default: 1)
+    randomizeSelectionCount?: boolean; //선택한 항목 수 내에서 무작위 선택 여부 (ex: 선택 항목: 3일 시, 1개 ~ 3개의 항목이 선택될 수 있음.) (디폴트: 1), Whether to randomly select within the chosen number of items (e.g., If selection items: 3, then 1 to 3 items can be selected.) (default: 1)
+};
+```
+
+❗주의: name, type, options 정의 및 설계를 정확히 하십시오.❗
+❗Caution: Ensure the definition and design of name, type, and options are accurate.❗
 
 ```javascript
-setGlobalUserDefinedItems([
+const GlobalUserDefinedItems: UserDefinedItem[] = [
     // 전역 커스텀 데이터 항목들
     { name: 'age', type: 'number', options: [10, 50], distribution: 'uniform'},
     { name: 'job', type: 'string', options: ['student', 'web developer', 'accountant'] },
@@ -97,7 +122,12 @@ const GlobalUserDefinedItems: UserDefinedItem[] = [
                         ]
                     }
                 ],
-        randomizeArrays: true
+        randomizeArrays: true,
+        selectionProbability: true,
+        probabilitySettings: [
+            { identifier: 1, probability: 45 }, //(45% 확률로 developer 선택)
+            { identifier: 2, probability: 45 }, //(45% 확률로 accountant 선택)
+        ]
     },
     {
         name: 'favorite drinks',
@@ -118,14 +148,14 @@ const GlobalUserDefinedItems: UserDefinedItem[] = [
 
 ### 예상 결과:
 
-전역 커스텀 데이터가 이벤트 데이터에 포함됩니다.
+커스텀 데이터가 이벤트 데이터에 포함됩니다.
 예를 들어, 사용자의 나이, 직업, 연봉, 선호 음료, 취미 등이 데이터에 포함될 수 있습니다.
 
 ```json
 {
     "eventType": "click",
     "timestamp": "2024-01-01T19:40:47.615Z",
-    "clickCount": 3,
+    "clickCount": 1,
     "job": [
         {
             "developer": [

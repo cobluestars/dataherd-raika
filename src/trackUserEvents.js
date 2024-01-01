@@ -20,7 +20,7 @@ function getRandomTimestamp(start, end) {
     return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
 }
 exports.getRandomTimestamp = getRandomTimestamp;
-// 전역 커스텀 데이터를 위한 UserDefinedItem 배열 (전역으로 데이터 설정)
+// 전역 커스텀 데이터들을 관리하기 위한 UserDefinedItem 배열
 exports.GlobalUserDefinedItems = [];
 // 다양한 로컬 커스텀 데이터 그룹들을 관리하기 위한 '객체' 
 var localCustomDataGroups = {};
@@ -55,24 +55,27 @@ exports.gaussianRandom = gaussianRandom;
 function createRandomData(items) {
     var randomData = {};
     items.forEach(function (item) {
-        var _a, _b, _c, _d, _e;
+        var _a, _b, _c, _d, _e, _f;
         //배열 & 객체의 항목들에 대한 랜덤 처리 여부
         var randomizeArrays = (_a = item.randomizeArrays) !== null && _a !== void 0 ? _a : false; // 기본값: false
         var randomizeObjects = (_b = item.randomizeObjects) !== null && _b !== void 0 ? _b : false; // 기본값: false
-        //배열 & 객체의 항목들을 랜덤 처리할 시, 선택 갯수 정의 
+        //배열 & 객체의 항목들을 랜덤 선택 처리할 시, 선택 갯수 정의 
         var arraySelectionCount = (_c = item.arraySelectionCount) !== null && _c !== void 0 ? _c : 1; // 기본값을 1로 설정
         var objectSelectionCount = (_d = item.objectSelectionCount) !== null && _d !== void 0 ? _d : 1; // 기본값을 1로 설정
+        //'문자열 그룹', '배열', '객체' 항목의 랜덤 선택 시, 특정 항목(들)이 선택될 확률 임의 조정 여부 (디폴트: false)
+        var selectionProbability = (_e = item.selectionProbability) !== null && _e !== void 0 ? _e : false; // 기본값: false
         //선택 갯수 내에서 무작위 선택 여부 (ex: 3개 선택 시 2개만 선택될 수 있음.)
-        var randomizeSelectionCount = (_e = item.randomizeSelectionCount) !== null && _e !== void 0 ? _e : false; // 기본값: false
+        var randomizeSelectionCount = (_f = item.randomizeSelectionCount) !== null && _f !== void 0 ? _f : false; // 기본값: false
         switch (item.type) {
             case 'number':
+                //숫자 처리
                 //단일 숫자일 경우, 이를 디폴트 값으로 설정
                 if (typeof item.options === 'number') {
                     randomData[item.name] = item.options;
                 }
                 //숫자 범위가 [ n, m ] 배열 형태로 주어질 경우, 그 확률이 '무작위' 혹은 '정규 분포'를 따르도록 설정
                 else if (Array.isArray(item.options) && item.options.length === 2) {
-                    var _f = item.options, min = _f[0], max = _f[1];
+                    var _g = item.options, min = _g[0], max = _g[1];
                     // 확률분포 디폴트 설정: 'uniform' (완전 랜덤)
                     var distribution = item.distribution != null ? item.distribution : 'uniform';
                     // 평균값의 디폴트 설정: 중간값
@@ -94,19 +97,37 @@ function createRandomData(items) {
                 }
                 break;
             case 'string':
+                //문자열 처리
                 if (typeof item.options === 'string') {
                     // 단일 문자열인 경우, 이를 디폴트 값으로 설정
                     randomData[item.name] = item.options;
                 }
                 else if (Array.isArray(item.options)) {
-                    //문자열 배열이 주어진 경우 랜덤하게 선택
-                    randomData[item.name] = item.options[Math.floor(Math.random() * item.options.length)];
+                    //문자열 배열인 경우
+                    if (item.options.every(function (option) { return typeof option === 'string'; })) {
+                        //랜덤하게 선택 
+                        if (selectionProbability === true) {
+                            //확률 기반 선택 적용
+                            var probabilities = settingProbabilities(item.options, item.probabilitySetting || []);
+                            var selectedOptions = applyProbabilityBasedSelection(item.options, probabilities);
+                            randomData[item.name] = selectedOptions.length > 0 ? selectedOptions[0] : null;
+                        }
+                        else {
+                            //무작위 선택
+                            randomData[item.name] = item.options[Math.floor(Math.random() * item.options.length)];
+                        }
+                    }
+                    else {
+                        // 배열이지만 문자열만 포함하지 않는 경우
+                        console.error("Invalid format for 'string' type in UserDefinedItem: ".concat(item.name, ", options must be an array of strings"));
+                    }
                 }
                 else {
                     console.error("Invalid format for 'string' type in UserDefinedItem: ".concat(item.name));
                 }
                 break;
             case 'boolean':
+                //boolean 처리
                 randomData[item.name] = Math.random() < 0.5;
                 break;
             case 'array':
@@ -114,19 +135,62 @@ function createRandomData(items) {
                 if (Array.isArray(item.options) && item.options.length > 0) {
                     if (randomizeArrays) {
                         // 랜덤 요소 선택
-                        var selectedCount = arraySelectionCount;
-                        // 선택 갯수 내에서 갯수 무작위 선택
-                        if (randomizeSelectionCount) {
-                            selectedCount = Math.floor(Math.random() * selectedCount) + 1;
-                        }
-                        var shuffled = __spreadArray([], item.options, true).sort(function () { return 0.5 - Math.random(); }); //배열을 무작위로 섞음
-                        randomData[item.name] = shuffled.slice(0, selectedCount).map(function (subItem) {
-                            // 배열의 각 요소가 또 다른 배열이나 객체일 경우, 재귀적으로 처리
-                            if (Array.isArray(subItem) || (typeof subItem === 'object' && subItem !== null)) {
-                                return createRandomData([subItem]);
+                        if (selectionProbability) {
+                            //확률 기반 선택 적용
+                            var probabilities = settingProbabilities(item.options, item.probabilitySetting || []);
+                            var selectedOptions_1 = applyProbabilityBasedSelection(item.options, probabilities);
+                            var selectedCount = arraySelectionCount;
+                            // 선택 갯수 내에서, 확률 옵션을 적용한 요소가 세팅한 확률로 무조건 선택됨.
+                            if (randomizeSelectionCount) {
+                                selectedCount = Math.floor(Math.random() * selectedCount) + 1;
                             }
-                            return subItem;
-                        });
+                            // 남은 선택 갯수 계산
+                            var remainingSelectionCount = arraySelectionCount - selectedOptions_1.length;
+                            if (randomizeSelectionCount) {
+                                remainingSelectionCount = Math.floor(Math.random() * remainingSelectionCount) + 1;
+                            }
+                            // 남은 요소들을 무작위로 섞어 선택
+                            var remainingOptions = item.options.filter(function (option) { return !selectedOptions_1.includes(option); });
+                            var shuffledRemaining = __spreadArray([], remainingOptions, true).sort(function () { return 0.5 - Math.random(); });
+                            selectedOptions_1 = selectedOptions_1.concat(shuffledRemaining.slice(0, remainingSelectionCount));
+                            // 최종 선택된 요소들에 대한 처리
+                            randomData[item.name] = selectedOptions_1.map(function (subItem) {
+                                // 배열의 각 요소가 또 다른 배열이나 객체일 경우, 재귀적으로 처리
+                                if (Array.isArray(subItem)) {
+                                    // subItem이 배열인 경우, 배열 내의 각 항목을 UserDefinedItem으로 간주하고 재귀적으로 처리
+                                    return createRandomData(subItem);
+                                }
+                                else if (typeof subItem === 'object' && subItem !== null) {
+                                    // subItem이 객체인 경우, UserDefinedItem 타입의 속성을 가지고 있는지 확인
+                                    if ('name' in subItem && 'type' in subItem) {
+                                        // subItem이 UserDefinedItem 타입인 경우, 재귀적으로 처리
+                                        return createRandomData([subItem]);
+                                    }
+                                    else {
+                                        // subItem이 UserDefinedItem 타입이 아닌 경우, 오류 처리
+                                        console.error("Invalid sub-item format in UserDefinedItem: ".concat(JSON.stringify(subItem)));
+                                        return null;
+                                    }
+                                }
+                                return subItem;
+                            });
+                        }
+                        else {
+                            //완전 랜덤 선택 적용
+                            var selectedCount = arraySelectionCount;
+                            // 선택 갯수 내에서 갯수 무작위 선택
+                            if (randomizeSelectionCount) {
+                                selectedCount = Math.floor(Math.random() * selectedCount) + 1;
+                            }
+                            var shuffled = __spreadArray([], item.options, true).sort(function () { return 0.5 - Math.random(); }); //배열을 무작위로 섞음
+                            randomData[item.name] = shuffled.slice(0, selectedCount).map(function (subItem) {
+                                // 배열의 각 요소가 또 다른 배열이나 객체일 경우, 재귀적으로 처리
+                                if (Array.isArray(subItem) || (typeof subItem === 'object' && subItem !== null)) {
+                                    return createRandomData([subItem]);
+                                }
+                                return subItem;
+                            });
+                        }
                     }
                     else {
                         // 전체 요소 포함
@@ -150,33 +214,78 @@ function createRandomData(items) {
                     var options_1 = item.options;
                     if (randomizeObjects) {
                         // 랜덤 속성 선택
+                        var selectedOptionKeys_1;
                         // 랜덤하게 선택할 키의 수를 결정
                         var selectedCount = objectSelectionCount;
-                        // 선택 갯수 내에서 갯수 무작위 선택
-                        if (randomizeSelectionCount) {
-                            selectedCount = Math.floor(Math.random() * selectedCount) + 1;
+                        if (selectionProbability) {
+                            //확률 기반 선택 적용
+                            // 선택 갯수 내에서 갯수 무작위 선택
+                            if (randomizeSelectionCount) {
+                                selectedCount = Math.floor(Math.random() * selectedCount) + 1;
+                            }
+                            // 확률 기반 선택
+                            var keys = Object.keys(options_1);
+                            var probabilities = settingProbabilities(keys, item.probabilitySetting || []);
+                            selectedOptionKeys_1 = applyProbabilityBasedSelection(keys, probabilities);
+                            // 확률 기반 선택 이후의 남은 선택 갯수 계산
+                            var remainingSelectionCount = objectSelectionCount - selectedOptionKeys_1.length;
+                            if (randomizeSelectionCount) {
+                                remainingSelectionCount = Math.min(remainingSelectionCount, keys.length - selectedOptionKeys_1.length);
+                                remainingSelectionCount = Math.floor(Math.random() * remainingSelectionCount) + 1;
+                            }
+                            // 남은 키들을 무작위로 섞어 선택
+                            var remainingKeys = keys.filter(function (key) { return !selectedOptionKeys_1.includes(key); });
+                            var shuffledRemaining = __spreadArray([], remainingKeys, true).sort(function () { return 0.5 - Math.random(); });
+                            shuffledRemaining.slice(0, remainingSelectionCount).forEach(function (key) {
+                                selectedOptions_2[key] = options_1[key];
+                            });
+                            // 최종 선택된 키에 해당하는 속성만 포함하는 새 객체 생성
+                            var selectedOptions_2 = selectedOptionKeys_1.slice(0, selectedCount).reduce(function (acc, key) {
+                                acc[key] = options_1[key];
+                                return acc;
+                            }, {}); //selectedOptions에도 타입 단언을 추가 사용                        
+                            // 최종 선택된 속성들에 대해 처리
+                            Object.keys(selectedOptions_2).forEach(function (key) {
+                                var subItem = selectedOptions_2[key];
+                                if (subItem && typeof subItem === 'object' && 'name' in subItem && 'type' in subItem) {
+                                    // subItem이 UserDefinedItem 타입인 경우, 재귀적으로 createRandomData 호출
+                                    randomData[item.name] = randomData[item.name] || {};
+                                    randomData[item.name][key] = createRandomData([subItem]);
+                                }
+                                else {
+                                    randomData[item.name] = randomData[item.name] || {};
+                                    randomData[item.name][key] = subItem;
+                                }
+                            });
                         }
-                        // 객체의 키를 배열로 변환하고, 무작위로 섞음
-                        var keys = Object.keys(options_1);
-                        var shuffledKeys = keys.sort(function () { return 0.5 - Math.random(); });
-                        // 선택된 키에 해당하는 속성만 포함하는 새 객체 생성
-                        var selectedOptions_1 = shuffledKeys.slice(0, selectedCount).reduce(function (acc, key) {
-                            acc[key] = options_1[key];
-                            return acc;
-                        }, {}); //selectedOptions에도 타입 단언을 추가 사용                        
-                        // 선택된 속성들에 대해 처리
-                        Object.keys(selectedOptions_1).forEach(function (key) {
-                            var subItem = selectedOptions_1[key];
-                            if (subItem && typeof subItem === 'object' && 'name' in subItem && 'type' in subItem) {
-                                // subItem이 UserDefinedItem 타입인 경우, 재귀적으로 createRandomData 호출
-                                randomData[item.name] = randomData[item.name] || {};
-                                randomData[item.name][key] = createRandomData([subItem]);
+                        else {
+                            //완전 랜덤 선택 적용
+                            // 선택 갯수 내에서 갯수 무작위 선택
+                            if (randomizeSelectionCount) {
+                                selectedCount = Math.floor(Math.random() * selectedCount) + 1;
                             }
-                            else {
-                                randomData[item.name] = randomData[item.name] || {};
-                                randomData[item.name][key] = subItem;
-                            }
-                        });
+                            // 객체의 키를 배열로 변환하고, 무작위로 섞음
+                            var keys = Object.keys(options_1);
+                            var shuffledKeys = keys.sort(function () { return 0.5 - Math.random(); });
+                            // 선택된 키에 해당하는 속성만 포함하는 새 객체 생성
+                            var selectedOptions_3 = shuffledKeys.slice(0, selectedCount).reduce(function (acc, key) {
+                                acc[key] = options_1[key];
+                                return acc;
+                            }, {}); //selectedOptions에도 타입 단언을 추가 사용                        
+                            // 선택된 속성들에 대해 처리
+                            Object.keys(selectedOptions_3).forEach(function (key) {
+                                var subItem = selectedOptions_3[key];
+                                if (subItem && typeof subItem === 'object' && 'name' in subItem && 'type' in subItem) {
+                                    // subItem이 UserDefinedItem 타입인 경우, 재귀적으로 createRandomData 호출
+                                    randomData[item.name] = randomData[item.name] || {};
+                                    randomData[item.name][key] = createRandomData([subItem]);
+                                }
+                                else {
+                                    randomData[item.name] = randomData[item.name] || {};
+                                    randomData[item.name][key] = subItem;
+                                }
+                            });
+                        }
                     }
                     else {
                         // 전체 속성 포함
@@ -199,99 +308,36 @@ function createRandomData(items) {
                     console.error("Invalid format for 'object' type in UserDefinedItem: ".concat(item.name));
                 }
                 break;
-            /**
-             * 배열, 객체에서의 재귀 알고리즘 활용 방안
-             * (주의: name, type, options 정의 및 설계를 정확히 하십시오.)
-            
-            예시: 복합적인 유저 데이터
-
-                const GlobalUserDefinedItems: UserDefinedItem[] = [
-                    {
-                        name: 'job',
-                        type: 'array',
-                        options:[
-                                    {
-                                        name: 'student',
-                                        type: 'array',
-                                        options: [
-                                            {
-                                                name: 'age',
-                                                type: 'number',
-                                                options: [10, 30]
-                                            },
-                                            {
-                                                name: 'salary',
-                                                type: 'number',
-                                                options: [8000, 20000]
-                                            }
-                                        ]
-                                    },
-                                    {
-                                        name: 'developer',
-                                        type: 'array',
-                                        options: [
-                                            {
-                                                name: 'age',
-                                                type: 'number',
-                                                options: [20, 60]
-                                            },
-                                            {
-                                                name: 'salary',
-                                                type: 'number',
-                                                distribution: 'normal',
-                                                mean: 50000,
-                                                options: [40000, 100000]
-                                            }
-                                        ]
-                                    },
-                                    {
-                                        name: 'accountant',
-                                        type: 'array',
-                                        options: [
-                                            {
-                                                name: 'age',
-                                                type: 'number',
-                                                options: [20, 60]
-                                            },
-                                            {
-                                                name: 'salary',
-                                                type: 'number',
-                                                distribution: 'normal',
-                                                mean: 50000,
-                                                options: [40000, 100000]
-                                            }
-                                        ]
-                                    }
-                                ],
-                        randomizeArrays: true
-                    },
-                    {
-                        name: 'favorite drinks',
-                        type: 'array',
-                        options: ['Americano', 'Latte', 'Cappuccino', 'Green Tea Latte'],
-                        randomizeArrays: true
-                    },
-                    {
-                        name: 'hobbies',
-                        type: 'object',
-                        options: { hobby1: 'reading', hobby2: 'gaming', hobby3: 'coding', hobby4: 'hiking' },
-                        randomizeObjects: true,
-                        objectSelectionCount: 3,
-                        randomizeSelectionCount: true
-                    }
-                ];
-             */
         }
     });
     return randomData;
 }
 exports.createRandomData = createRandomData;
+/** 확률 세팅 함수: 배열, 객체의 요소마다 설정한 확률을 세팅함. */
+function settingProbabilities(options, settings) {
+    var probabilities = new Array(options.length).fill(0);
+    settings.forEach(function (setting) {
+        var index = typeof setting.identifier === 'number' ? setting.identifier : options.indexOf(setting.identifier);
+        probabilities[index] = setting.probability;
+    });
+    return probabilities;
+}
+/** 세팅된 확률로 항목(들)을 선택하게 하는 함수 */
+function applyProbabilityBasedSelection(options, probabilities) {
+    var selectedOptions = [];
+    options.forEach(function (option, index) {
+        if (Math.random() * 100 < probabilities[index]) {
+            selectedOptions.push(option);
+        }
+    });
+    return selectedOptions;
+}
 //사용자 클릭 이벤트 리스너 추적 함수 Click Event Listener
 function trackClickEvent(event, eventType, includeLocalCustomData, includeGlobalCustomData, callback) {
     if (includeLocalCustomData === void 0) { includeLocalCustomData = false; }
     if (includeGlobalCustomData === void 0) { includeGlobalCustomData = false; }
-    // eventData객체를 저장하기 위한 배열
-    var allEventData = []; //타입 명시
+    // eventData객체를 저장하기 위한 객체
+    var allEventData = {};
     for (var i = 0; i < exports.userDefinedClickCount; i++) { //설정한 클릭 횟수만큼 이벤트 데이터 객체 생성
         var localCustomDataList = getLocalCustomDataGroup(eventType);
         var eventData = {
@@ -310,8 +356,8 @@ function trackClickEvent(event, eventType, includeLocalCustomData, includeGlobal
             var globalCustomData = createRandomData(exports.GlobalUserDefinedItems);
             Object.assign(eventData, globalCustomData);
         }
-        //생성된 eventData를 배열에 추가
-        allEventData.push(eventData);
+        var eventId = "".concat(event.type, "_").concat(i + 1); // 고유 식별자 생성
+        allEventData[eventId] = eventData; // 객체에 생성된 eventData 저장
     }
     // 콜백 함수 호출
     if (callback) {
@@ -325,8 +371,8 @@ function trackKeywordEvent(keyword, eventType, includeLocalCustomData, includeGl
     if (includeLocalCustomData === void 0) { includeLocalCustomData = false; }
     if (includeGlobalCustomData === void 0) { includeGlobalCustomData = false; }
     if (repeatCount === void 0) { repeatCount = 1; }
-    // eventData객체를 저장하기 위한 배열
-    var allEventData = []; //타입 명시
+    // eventData객체를 저장하기 위한 객체
+    var allEventData = {};
     for (var i = 0; i < exports.userDefinedKeywordCount; i++) { //설정한 키워드 입력 횟수만큼 이벤트 데이터 객체 생성
         var localCustomDataList = getLocalCustomDataGroup(eventType);
         var eventData = {
@@ -347,8 +393,8 @@ function trackKeywordEvent(keyword, eventType, includeLocalCustomData, includeGl
             var globalCustomData = createRandomData(exports.GlobalUserDefinedItems);
             Object.assign(eventData, globalCustomData);
         }
-        //생성된 eventData를 배열에 추가
-        allEventData.push(eventData);
+        var eventId = "".concat(eventType, "_").concat(i + 1); // 고유 식별자 생성
+        allEventData[eventId] = eventData; // 객체에 eventData 저장
     }
     // 콜백 함수 호출
     if (callback) {
@@ -493,6 +539,11 @@ const GlobalUserDefinedItems: UserDefinedItem[] = [
                     }
                 ],
         randomizeArrays: true
+        selectionProbability: true,
+        probabilitySettings: [
+                { identifier: 1, probability: 45 }, //(45% 확률로 developer 선택)
+                { identifier: 2, probability: 45 }, //(45% 확률로 accountant 선택)
+        ]
     },
     {
         name: 'favorite drinks',
