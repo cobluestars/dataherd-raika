@@ -75,10 +75,11 @@ declare module "dataherd-raika" {
     // 정규 분포에 따른 랜덤 숫자 생성 함수
     export function gaussianRandom(mean: number, standardDeviation: number): number;
     
-    /** 확률 세팅 함수: 배열, 객체의 요소마다 설정한 확률을 세팅함. */
+    /** 확률 설정 함수: 배열, 객체의 각 항목에 확률을 설정 / 확률 설정하지 않은 나머지 항목들은 나머지 확률이 나뉘어서 균등하게 분배 */
     function settingProbabilities(
         options: (number | string | object)[],
-        settings: ProbabilitySetting[]
+        settings: ProbabilitySetting[],
+        isObject: boolean //객체일 경우 true
     ): number[]
 
     /** 세팅된 확률로 항목(들)을 선택하게 하는 함수 */

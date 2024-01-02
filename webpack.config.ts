@@ -3,7 +3,7 @@ const webpack = require('webpack');
 
 const config = {
     entry: './src/trackUserEvents.js',
-    mode: 'development', // 'production' 모드로 변경 시 최적화된 코드 생성, 'development': 개발 모드
+    mode: 'production', // 'production' 모드로 변경 시 최적화된 코드 생성, 'development': 개발 모드
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: '[name].bundle.js',
