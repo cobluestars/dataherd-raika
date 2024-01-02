@@ -9,9 +9,6 @@ declare module "dataherd-raika" {
     export let startTime: Date;
     export let endTime: Date;
 
-    /**시작 및 종료 시간 설정 함수*/
-    export function setTimestampRange(start: Date, end: Date): void
-
     //startTime - endTime 시간 범위 내에서 랜덤한 타임스탬프 생성
     // 이 함수는 옵션으로 '피크 타임'을 지정할 수 있으며, 피크 타임 동안 타임스탬프가 생성될 확률이 높아짐.
     export function getRandomTimestamp(): Date

@@ -3,30 +3,33 @@ export let userDefinedClickCount = 1;
 export let userDefinedKeywordCount = 1;
 export let startTime = new Date(); // initialize start time
 export let endTime = new Date(); // initialize end time
-/**시작 및 종료 시간 설정 함수:
- * 얘사: 2024-01-01 자정 ~ 오전 8시 사이의 랜덤한 타임스탬프를 생성하고 싶다면,
- * setTimestampRange(new Date('2024-01-01T00:00:00'), newDate('2024-01-01T08:00:00'));*/
-export function setTimestampRange(start, end) {
-    // start가 end보다 미래일 경우 에러 출력
-    if (start.getTime() > end.getTime()) {
-        console.error("Error: start date cannot be later than end date.");
-        return;
-    }
-    startTime = start;
-    endTime = end;
+//전역 변수로 사용될 시간 설정 객체 TimestampSettings
+let TimestampSettings;
+//시간 설정 초기화 함수
+export function initializeTimestampSettings(settings) {
+    //시작/종료 시간값이 제공되지 않았거나 유효하지 않을 시, 현재 시간 사용
+    const now = new Date().toISOString();
+    TimestampSettings = {
+        startTime: settings.startTime || now,
+        endTime: settings.endTime || now,
+        peakTimes: settings.peakTimes
+    };
 }
 //startTime - endTime 시간 범위 내에서 랜덤한 타임스탬프 생성
 // 이 함수는 옵션으로 '피크 타임'을 지정할 수 있으며, 피크 타임 동안 타임스탬프가 생성될 확률이 높아짐.
 export function getRandomTimestamp() {
-    // 문자열로 된 날짜를 Date 객체로 파싱하는 함수입니다.
     //TimestampSettings 직접 사용
     const { startTime, endTime, peakTimes } = TimestampSettings;
-    const parseDateTime = (dateTimeStr) => new Date(dateTimeStr);
+    // 문자열로 된 날짜를 Date 객체로 파싱하는 함수
+    const parseDateTime = (dateTimeStr) => {
+        //UTC 기준으로 Date 객체 생성
+        return new Date(Date.parse(dateTimeStr + 'Z'));
+    };
     let startDt = parseDateTime(startTime);
     let endDt = parseDateTime(endTime);
     // 시작 시간이 종료 시간보다 미래인 경우, 현재 시간을 사용함.
     const now = new Date();
-    if (startDt.getTime() > endDt.getDate()) {
+    if (startDt.getTime() > endDt.getTime()) {
         startDt = now;
         endDt = new Date(now.getTime() + 1000);
     }
@@ -55,7 +58,8 @@ export function getRandomTimestamp() {
     }
     // 주어진 두 시간 사이에서 랜덤한 타임스탬프 생성
     const getRandomDate = (start, end) => {
-        return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+        const randomTime = start.getTime() + Math.random() * (end.getTime() - start.getTime());
+        return new Date(randomTime);
     };
     // 피크 타임이 없으면, 두 시간 사이에서 랜덤한 타임스탬프를 반환
     if (!peakTimes) {
@@ -71,18 +75,6 @@ export function getRandomTimestamp() {
     // 가중치를 고려하여 랜덤하게 간격을 선택하고, 해당 간격 내에서 타임스탬프를 생성
     let chosenInterval = intervals[Math.floor(Math.random() * intervals.length)];
     return getRandomDate(chosenInterval[0], chosenInterval[1]);
-}
-//전역 변수로 사용될 시간 설정 객체 TimestampSettings
-let TimestampSettings;
-//시간 설정 초기화 함수
-export function initializeTimestampSettings(settings) {
-    //시작/종료 시간값이 제공되지 않았거나 유효하지 않을 시, 현재 시간 사용
-    const now = new Date().toISOString();
-    TimestampSettings = {
-        startTime: settings.startTime || now,
-        endTime: settings.endTime || now,
-        peakTimes: settings.peakTimes
-    };
 }
 // 전역 커스텀 데이터들을 관리하기 위한 UserDefinedItem 배열
 export let GlobalUserDefinedItems = [];
