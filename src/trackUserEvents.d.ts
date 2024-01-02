@@ -9,9 +9,24 @@ declare module "dataherd-raika" {
     export let startTime: Date;
     export let endTime: Date;
 
-    // 주어진 시작 및 종료 시간 사이의 랜덤 타임스탬프를 반환하는 함수
-    export function getRandomTimestamp(start: Date, end: Date): Date;
+    /**시작 및 종료 시간 설정 함수*/
+    export function setTimestampRange(start: Date, end: Date): void
 
+    //startTime - endTime 시간 범위 내에서 랜덤한 타임스탬프 생성
+    // 이 함수는 옵션으로 '피크 타임'을 지정할 수 있으며, 피크 타임 동안 타임스탬프가 생성될 확률이 높아짐.
+    export function getRandomTimestamp(): Date
+
+    //object TimestampSettings type 선언
+    export type TimestampSettings = {
+        startTime: string;
+        endTime: string;
+        peakTimes?: string[][];
+    };
+    
+    //시간 설정 초기화 함수
+    export function initializeTimestampSettings(settings: TimestampSettings): void
+
+    
     // 사용자 클릭 이벤트 데이터 인터페이스
     export interface ClickEventData {
         eventType: string;
@@ -124,7 +139,4 @@ declare module "dataherd-raika" {
     export function setUserClickCount(ClickEventCount: number): void;
     // 커스텀 키워드 횟수 설정 함수
     export function setUserKeywordCount(KeywordEventCount: number): void;
-
-    // 시작 및 종료 시간 설정 함수
-    export function setTimestampRange(start: Date, end: Date): void;
 }

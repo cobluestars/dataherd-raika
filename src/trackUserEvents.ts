@@ -4,16 +4,113 @@ export let userDefinedKeywordCount = 1;
 export let startTime: Date = new Date(); // initialize start time
 export let endTime: Date = new Date(); // initialize end time
 
-//startTime - endTime 시간 범위 내에서 랜덤한 타임스탬프 생성
-export function getRandomTimestamp(start: Date, end: Date): Date {
-    return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+/**시작 및 종료 시간 설정 함수: 
+ * 얘사: 2024-01-01 자정 ~ 오전 8시 사이의 랜덤한 타임스탬프를 생성하고 싶다면,
+ * setTimestampRange(new Date('2024-01-01T00:00:00'), newDate('2024-01-01T08:00:00'));*/
+export function setTimestampRange(start: Date, end: Date): void {
+    // start가 end보다 미래일 경우 에러 출력
+    if (start.getTime() > end.getTime()) {
+        console.error("Error: start date cannot be later than end date.");
+        return;
+    }
+
+    startTime = start;
+    endTime = end;
 }
+
+//startTime - endTime 시간 범위 내에서 랜덤한 타임스탬프 생성
+// 이 함수는 옵션으로 '피크 타임'을 지정할 수 있으며, 피크 타임 동안 타임스탬프가 생성될 확률이 높아짐.
+export function getRandomTimestamp(): Date {
+    // 문자열로 된 날짜를 Date 객체로 파싱하는 함수입니다.
+    //TimestampSettings 직접 사용
+    const {startTime, endTime, peakTimes } = TimestampSettings;
+
+    const parseDateTime = (dateTimeStr: string): Date => new Date(dateTimeStr);
+    let startDt = parseDateTime(startTime);
+    let endDt = parseDateTime(endTime);
+
+    // 시작 시간이 종료 시간보다 미래인 경우, 현재 시간을 사용함.
+    const now = new Date();
+    if (startDt.getTime() > endDt.getDate()) {
+        startDt = now;
+        endDt = new Date(now.getTime() + 1000);
+    }
+
+    // 피크 타임의 유효성 검사하는 함수
+    // 피크 타임은 시작 시간과 종료 시간 사이에 있어야 하며, 올바른 형식이어야 함.
+    /** ex)
+     *  start: '2023.01.02T00:00:00',
+     *  end: '2023.01.02T08:00:00',
+     *  picktime: [['2023.01.02T04:00:00', '2023.01.02T06:00:00'], ['2023.01.02T07:00:00', '2023.01.02T08:00:00']) */
+    const validatePeakTimes = (peakTimes: string[][], start: Date, end: Date): boolean => {
+        if (!peakTimes) return true;
+        if (!Array.isArray(peakTimes) || !peakTimes.every(pt => Array.isArray(pt) && pt.length === 2)) return false;
+        return peakTimes.every(([startPt, endPt]) => {
+            const peakStart = parseDateTime(startPt);
+            const peakEnd = parseDateTime(endPt);
+            return peakStart >= start && peakEnd <= end;
+        });
+    };
+
+    let validPeakTimes = peakTimes
+
+    // 피크 타임이 유효하지 않은 시 콘솔 에러 출력, 피크 타임 없이 함수를 실행
+    if (validPeakTimes && !validatePeakTimes(validPeakTimes, startDt, endDt)) {
+        console.error("Invalid peak times format or out of range. Defaulting to random timestamp between start and end.");
+        validPeakTimes = undefined;
+    }
+
+    // 주어진 두 시간 사이에서 랜덤한 타임스탬프 생성
+    const getRandomDate = (start: Date, end: Date): Date => {
+        return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+    };
+
+    // 피크 타임이 없으면, 두 시간 사이에서 랜덤한 타임스탬프를 반환
+    if (!peakTimes) {
+        return getRandomDate(startDt, endDt);
+    }
+
+    // 피크 타임과 비피크 타임에 대한 간격과 가중치를 계산
+    let intervals: Date[][] = peakTimes.map(pt => [parseDateTime(pt[0]), parseDateTime(pt[1])]);
+    let totalDuration = endDt.getTime() - startDt.getTime();
+    let peakWeights = intervals.map(([start, end]) => ((end.getTime() - start.getTime()) / totalDuration) * 10);
+    let nonPeakWeight = Math.max(1, 10 - peakWeights.reduce((a, b) => a + b, 0));
+    intervals.push([startDt, endDt]);
+    peakWeights.push(nonPeakWeight);
+
+    // 가중치를 고려하여 랜덤하게 간격을 선택하고, 해당 간격 내에서 타임스탬프를 생성
+    let chosenInterval = intervals[Math.floor(Math.random() * intervals.length)];
+    return getRandomDate(chosenInterval[0], chosenInterval[1]);
+}
+
+//object TimestampSettings type 선언
+export type TimestampSettings = {
+    startTime: string;
+    endTime: string;
+    peakTimes?: string[][];
+};
+
+//전역 변수로 사용될 시간 설정 객체 TimestampSettings
+let TimestampSettings: TimestampSettings;
+
+//시간 설정 초기화 함수
+export function initializeTimestampSettings(settings: TimestampSettings): void {
+    //시작/종료 시간값이 제공되지 않았거나 유효하지 않을 시, 현재 시간 사용
+    const now = new Date().toISOString();
+    TimestampSettings = {
+        startTime: settings.startTime || now,
+        endTime: settings.endTime || now,
+        peakTimes: settings.peakTimes
+    };
+}
+
 
 //사용자 클릭 이벤트 데이터 인터페이스 User Click Event Data interface
 export interface ClickEventData {
     eventType: string;
     timestamp: Date;
     clickCount: number; // 사용자 정의 가능한 클릭 횟수
+    [key: string]: any; // 추가 커스텀 데이터를 위한 인덱스 시그니처
 }
 
 //사용자 입력 키워드 이벤트 데이터 인터페이스 User Keyword Event Data interface
@@ -23,6 +120,7 @@ export interface KeywordEventData {
     timestamp: Date;
     keywordCount: number; // 사용자 정의 가능한 키워드 생성 & 검색 횟수
     repeatCount: number; // 같은 키워드의 반복 횟수 (디폴트: 1)
+    [key: string]: any; // 추가 커스텀 데이터를 위한 인덱스 시그니처
 }
 
 //커스텀 데이터 항목 타입 Custom data type
@@ -465,7 +563,7 @@ export function trackClickEvent(
 
         const eventData: ClickEventData = {
             eventType: event.type,
-            timestamp: getRandomTimestamp(startTime, endTime),
+            timestamp: getRandomTimestamp(),
             clickCount: i + 1,  //각 이벤트에 대한 고유한 클릭 카운트 부여
         };
 
@@ -516,7 +614,7 @@ export function trackKeywordEvent(
         const eventData: KeywordEventData = {
             keyword: keyword,
             eventType: eventType,
-            timestamp: getRandomTimestamp(startTime, endTime),
+            timestamp: getRandomTimestamp(),
             keywordCount: i + 1,  //각 이벤트에 대한 고유한 키워드 카운트 부여
             repeatCount: repeatCount,
         };
@@ -569,18 +667,4 @@ export function setUserKeywordCount(KeywordEventCount: number): void {
         console.error(`Invalid Keyword Count. Please enter a number between 1 and ${Number.MAX_SAFE_INTEGER}. Default value 1 will be set.`);
         userDefinedKeywordCount = 1; // Set a default value 1
     }
-}
-
-/**시작 및 종료 시간 설정 함수: 
- * 얘사: 2024-01-01 자정 ~ 오전 8시 사이의 랜덤한 타임스탬프를 생성하고 싶다면,
- * setTimestampRange(new Date('2024-01-01T00:00:00'), newDate('2024-01-01T08:00:00'));*/
-export function setTimestampRange(start: Date, end: Date): void {
-    // start가 end보다 미래일 경우 에러 출력
-    if (start.getTime() > end.getTime()) {
-        console.error("Error: start date cannot be later than end date.");
-        return;
-    }
-
-    startTime = start;
-    endTime = end;
 }

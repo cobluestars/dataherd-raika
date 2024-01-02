@@ -3,9 +3,86 @@ export let userDefinedClickCount = 1;
 export let userDefinedKeywordCount = 1;
 export let startTime = new Date(); // initialize start time
 export let endTime = new Date(); // initialize end time
+/**시작 및 종료 시간 설정 함수:
+ * 얘사: 2024-01-01 자정 ~ 오전 8시 사이의 랜덤한 타임스탬프를 생성하고 싶다면,
+ * setTimestampRange(new Date('2024-01-01T00:00:00'), newDate('2024-01-01T08:00:00'));*/
+export function setTimestampRange(start, end) {
+    // start가 end보다 미래일 경우 에러 출력
+    if (start.getTime() > end.getTime()) {
+        console.error("Error: start date cannot be later than end date.");
+        return;
+    }
+    startTime = start;
+    endTime = end;
+}
 //startTime - endTime 시간 범위 내에서 랜덤한 타임스탬프 생성
-export function getRandomTimestamp(start, end) {
-    return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+// 이 함수는 옵션으로 '피크 타임'을 지정할 수 있으며, 피크 타임 동안 타임스탬프가 생성될 확률이 높아짐.
+export function getRandomTimestamp() {
+    // 문자열로 된 날짜를 Date 객체로 파싱하는 함수입니다.
+    //TimestampSettings 직접 사용
+    const { startTime, endTime, peakTimes } = TimestampSettings;
+    const parseDateTime = (dateTimeStr) => new Date(dateTimeStr);
+    let startDt = parseDateTime(startTime);
+    let endDt = parseDateTime(endTime);
+    // 시작 시간이 종료 시간보다 미래인 경우, 현재 시간을 사용함.
+    const now = new Date();
+    if (startDt.getTime() > endDt.getDate()) {
+        startDt = now;
+        endDt = new Date(now.getTime() + 1000);
+    }
+    // 피크 타임의 유효성 검사하는 함수
+    // 피크 타임은 시작 시간과 종료 시간 사이에 있어야 하며, 올바른 형식이어야 함.
+    /** ex)
+     *  start: '2023.01.02T00:00:00',
+     *  end: '2023.01.02T08:00:00',
+     *  picktime: [['2023.01.02T04:00:00', '2023.01.02T06:00:00'], ['2023.01.02T07:00:00', '2023.01.02T08:00:00']) */
+    const validatePeakTimes = (peakTimes, start, end) => {
+        if (!peakTimes)
+            return true;
+        if (!Array.isArray(peakTimes) || !peakTimes.every(pt => Array.isArray(pt) && pt.length === 2))
+            return false;
+        return peakTimes.every(([startPt, endPt]) => {
+            const peakStart = parseDateTime(startPt);
+            const peakEnd = parseDateTime(endPt);
+            return peakStart >= start && peakEnd <= end;
+        });
+    };
+    let validPeakTimes = peakTimes;
+    // 피크 타임이 유효하지 않은 시 콘솔 에러 출력, 피크 타임 없이 함수를 실행
+    if (validPeakTimes && !validatePeakTimes(validPeakTimes, startDt, endDt)) {
+        console.error("Invalid peak times format or out of range. Defaulting to random timestamp between start and end.");
+        validPeakTimes = undefined;
+    }
+    // 주어진 두 시간 사이에서 랜덤한 타임스탬프 생성
+    const getRandomDate = (start, end) => {
+        return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+    };
+    // 피크 타임이 없으면, 두 시간 사이에서 랜덤한 타임스탬프를 반환
+    if (!peakTimes) {
+        return getRandomDate(startDt, endDt);
+    }
+    // 피크 타임과 비피크 타임에 대한 간격과 가중치를 계산
+    let intervals = peakTimes.map(pt => [parseDateTime(pt[0]), parseDateTime(pt[1])]);
+    let totalDuration = endDt.getTime() - startDt.getTime();
+    let peakWeights = intervals.map(([start, end]) => ((end.getTime() - start.getTime()) / totalDuration) * 10);
+    let nonPeakWeight = Math.max(1, 10 - peakWeights.reduce((a, b) => a + b, 0));
+    intervals.push([startDt, endDt]);
+    peakWeights.push(nonPeakWeight);
+    // 가중치를 고려하여 랜덤하게 간격을 선택하고, 해당 간격 내에서 타임스탬프를 생성
+    let chosenInterval = intervals[Math.floor(Math.random() * intervals.length)];
+    return getRandomDate(chosenInterval[0], chosenInterval[1]);
+}
+//전역 변수로 사용될 시간 설정 객체 TimestampSettings
+let TimestampSettings;
+//시간 설정 초기화 함수
+export function initializeTimestampSettings(settings) {
+    //시작/종료 시간값이 제공되지 않았거나 유효하지 않을 시, 현재 시간 사용
+    const now = new Date().toISOString();
+    TimestampSettings = {
+        startTime: settings.startTime || now,
+        endTime: settings.endTime || now,
+        peakTimes: settings.peakTimes
+    };
 }
 // 전역 커스텀 데이터들을 관리하기 위한 UserDefinedItem 배열
 export let GlobalUserDefinedItems = [];
@@ -300,7 +377,7 @@ export function trackClickEvent(event, eventType, includeLocalCustomData = false
         const localCustomDataList = getLocalCustomDataGroup(eventType);
         const eventData = {
             eventType: event.type,
-            timestamp: getRandomTimestamp(startTime, endTime),
+            timestamp: getRandomTimestamp(),
             clickCount: i + 1, //각 이벤트에 대한 고유한 클릭 카운트 부여
         };
         // localCustomData를 조건부로 추가 (특정 요소에서 추출하고자 하는 커스텀 클릭 이벤트 데이터 그룹)
@@ -332,7 +409,7 @@ export function trackKeywordEvent(keyword, eventType, includeLocalCustomData = f
         const eventData = {
             keyword: keyword,
             eventType: eventType,
-            timestamp: getRandomTimestamp(startTime, endTime),
+            timestamp: getRandomTimestamp(),
             keywordCount: i + 1, //각 이벤트에 대한 고유한 키워드 카운트 부여
             repeatCount: repeatCount,
         };
@@ -380,310 +457,3 @@ export function setUserKeywordCount(KeywordEventCount) {
         userDefinedKeywordCount = 1; // Set a default value 1
     }
 }
-/**시작 및 종료 시간 설정 함수:
- * 얘사: 2024-01-01 자정 ~ 오전 8시 사이의 랜덤한 타임스탬프를 생성하고 싶다면,
- * setTimestampRange(new Date('2024-01-01T00:00:00'), newDate('2024-01-01T08:00:00'));*/
-export function setTimestampRange(start, end) {
-    // start가 end보다 미래일 경우 에러 출력
-    if (start.getTime() > end.getTime()) {
-        console.error("Error: start date cannot be later than end date.");
-        return;
-    }
-    startTime = start;
-    endTime = end;
-}
-/**
- *
-### 사용법 및 예상 결과
-
-#### 1. 시작 및 종료 시간 설정
-
-```javascript
-setTimestampRange(new Date('2024-01-01T00:00:00'), new Date('2024-01-01T08:00:00'));
-```
-
-이 함수는 이벤트 타임스탬프를 생성할 때 사용되는 시간 범위를 설정합니다.
-2024-01-01 자정 ~ 오전 8시 사이의 랜덤한 타임스탬프를 생성하고 싶다면, 위 코드처럼 설정하면 됩니다.
-
-
-#### 2. 특정 키워드 생성 & 검색 횟수 조정
-
-```javascript
-setUserClickCount(3);
-setUserKeywordCount(3);
-```
-
-이 함수들은 사용자가 클릭하거나 키워드를 생성/검색할 때마다 적용되는 카운트, 만들어지는 데이터 수를 설정합니다.
-
-
-#### 3. 전역 커스텀 데이터 설정
-
-```javascript
-setGlobalUserDefinedItems([
-    // 전역 커스텀 데이터 항목들
-    { name: 'age', type: 'number', options: [10, 50], distribution: 'uniform'},
-    { name: 'job', type: 'string', options: ['student', 'web developer', 'accountant'] },
-    { name: 'salary', type: 'number', options: [25000, 100000], distribution: 'normal', mean: 36000, standardDeviation: (100000 - 25000) / 6 },
-    { name: 'drinks', type: 'array', options: ['Americano', 'Latte', 'Cappuccino', 'Green Tea Latte'], randomizeArrays: true },
-    { name: 'hobbies', type: 'object', options: { hobby1: 'reading', hobby2: 'gaming', hobby3: 'coding', hobby4: 'hiking' }, randomizeObjects: true }
-]);
-```
-
-```javascript
-const GlobalUserDefinedItems: UserDefinedItem[] = [
-    {
-        name: 'job',
-        type: 'array',
-        options:[
-                    {
-                        name: 'student',
-                        type: 'array',
-                        options: [
-                            {
-                                name: 'age',
-                                type: 'number',
-                                options: [10, 30]
-                            },
-                            {
-                                name: 'salary',
-                                type: 'number',
-                                options: [8000, 20000]
-                            }
-                        ]
-                    },
-                    {
-                        name: 'developer',
-                        type: 'array',
-                        options: [
-                            {
-                                name: 'age',
-                                type: 'number',
-                                options: [20, 60]
-                            },
-                            {
-                                name: 'salary',
-                                type: 'number',
-                                distribution: 'normal',
-                                mean: 50000,
-                                options: [40000, 100000]
-                            }
-                        ]
-                    },
-                    {
-                        name: 'accountant',
-                        type: 'array',
-                        options: [
-                            {
-                                name: 'age',
-                                type: 'number',
-                                options: [20, 60]
-                            },
-                            {
-                                name: 'salary',
-                                type: 'number',
-                                distribution: 'normal',
-                                mean: 50000,
-                                options: [40000, 100000]
-                            }
-                        ]
-                    }
-                ],
-        randomizeArrays: true
-        selectionProbability: true,
-        probabilitySettings: [
-                { identifier: 1, probability: 45 }, //(45% 확률로 developer 선택)
-                { identifier: 2, probability: 45 }, //(45% 확률로 accountant 선택)
-        ]
-    },
-    {
-        name: 'favorite drinks',
-        type: 'array',
-        options: ['Americano', 'Latte', 'Cappuccino', 'Green Tea Latte'],
-        randomizeArrays: true
-    },
-    {
-        name: 'hobbies',
-        type: 'object',
-        options: { hobby1: 'reading', hobby2: 'gaming', hobby3: 'coding', hobby4: 'hiking' },
-        randomizeObjects: true,
-        objectSelectionCount: 3,
-        randomizeSelectionCount: true
-    }
-];
-```
-
-#### 예상 결과:
-
-전역 커스텀 데이터가 이벤트 데이터에 포함됩니다.
-예를 들어, 사용자의 나이, 직업, 연봉, 선호 음료, 취미 등이 데이터에 포함될 수 있습니다.
-
-```json
-{
-    "eventType": "click",
-    "timestamp": "2024-01-01T19:40:47.615Z",
-    "clickCount": 3,
-    "job": [
-        {
-            "developer": [
-                {
-                    "age": 30
-                },
-                {
-                    "salary": 55220
-                }
-            ]
-        }
-    ],
-    "favorite drinks": [
-        "Americano"
-    ],
-    "hobbies": {
-        "hobby1": "reading",
-        "hobby3": "coding"
-    }
-}
-```
-
-
-#### 4. 로컬 커스텀 데이터 그룹 설정
-
-```javascript
-setLocalCustomDataGroup('clickEventCategoryA', [
-    { name: 'categoryA-specific', type: 'string', options: ['Option1', 'Option2'] }
-]);
-setLocalCustomDataGroup('clickEventCategoryB', [
-    { name: 'categoryB-specific', type: 'number', options: [1, 10] }
-]);
-```
-
-
-#### 5. 클릭 이벤트 리스너 설정/ 클릭 이벤트 추적 함수 사용
-
-```javascript
-document.getElementById('elementA').addEventListener('click', (event) => {
-    trackClickEvent(event, 'clickEventCategoryA', true, false);
-});
-document.getElementById('elementB').addEventListener('click', (event) => {
-    trackClickEvent(event, 'clickEventCategoryB', false, true);
-});
-```
-
-#### 예상 결과:
-
-elementA 클릭 시
-
-로컬 커스텀 데이터(clickEventCategoryA 그룹에 정의된 데이터)가 클릭 이벤트 데이터에 포함되어 전송됩니다.
-이 데이터는 trackClickEvent 함수의 세 번째 매개변수로 true를 지정하여 로컬 커스텀 데이터를 포함하도록 설정합니다.
-
-```json
-{
-    "eventType": "click",
-    "elementId": "elementA",
-    "timestamp": "2024-01-01T02:30:00.000Z",
-    "clickCount": 1,
-    "localCustomData": {
-        "categoryA-specific": "Option1"
-    }
-}
-```
-
-elementB 클릭 시
-
-전역 커스텀 데이터(GlobalUserDefinedItems에 정의된 데이터)가 클릭 이벤트 데이터에 포함되어 전송됩니다.
-이 데이터는 trackClickEvent 함수의 네 번째 매개변수로 true를 지정하여 전역 커스텀 데이터를 포함하도록 설정합니다.
-
-```json
-{
-    "eventType": "click",
-    "elementId": "elementB",
-    "timestamp": "2024-01-01T03:45:00.000Z",
-    "clickCount": 1,
-    "globalCustomData": {
-        "age": 30,
-        "job": "accountant",
-        "salary": 55000,
-        "drinks": ["Cappuccino"],
-        "hobbies": {"hobby1": "coding", "hobby2": "hiking"}
-    }
-}
-```
-
-
-#### 6. 키워드 이벤트 추적 함수 사용
-
-키워드 이벤트 추적 함수
-
-```javascript
-function simulateKeywordEvent() {
-    const keyword = "exampleKeyword";
-    trackKeywordEvent(keyword, 'search', true, 1, true);
-}
-
-simulateKeywordEvent(); // 함수 호출로 키워드 이벤트 시뮬레이션
-```
-
-#### 예상 결과:
-
-키워드 이벤트가 추적되며, 해당 이벤트에 관련된 데이터가 포함됩니다.
-
-```json
-{
-    "keyword": "exampleKeyword",
-    "eventType": "search",
-    "timestamp": "2024-01-01T04:00:00.000Z",
-    "keywordCount": 1,
-    "repeatCount": 1,
-    "age": 32,
-    "job": "developer",
-    "salary": 30000,
-    "drinks": ["Green Tea Latte"],
-    "hobbies": {"hobby1": "gaming"}
-}
-```
-
-
-#### 7. 서버 데이터 저장
-
-이벤트 추적 함수(trackClickEvent 또는 trackKeywordEvent)에 콜백 함수를 전달하여, 이벤트 데이터를 서버로 전송할 수 있습니다.
-이 콜백 함수는 이벤트 데이터를 받아 서버 API 엔드포인트로 전송하는 로직을 포함합니다.
-
-```javascript
-// 예시: 클릭 이벤트 데이터를 서버로 전송하는 콜백 함수
-const sendEventToServer = async (eventData) => {
-    try {
-        const response = await fetch('/api/save-event-data', {
-            method: 'POST',
-            body: JSON.stringify(eventData),
-            headers: {'Content-Type': 'application/json'}
-        });
-        if (!response.ok) throw new Error('Network response was not ok');
-    } catch (error) {
-        console.error('Error sending event data:', error);
-    }
-};
-
-// 클릭 이벤트 추적 함수 호출 시 콜백 함수 전달
-trackClickEvent(event, 'eventType', true, true, sendEventToServer);
-```
-
-예상 결과
-위의 콜백 함수를 사용하여 이벤트 추적 시, 다음과 같은 흐름으로 데이터가 처리됩니다:
-
-1. 사용자의 클릭 또는 키워드 입력 이벤트가 발생합니다.
-2. trackClickEvent 또는 trackKeywordEvent 함수가 호출되며, 이벤트 데이터가 생성됩니다.
-3. 생성된 이벤트 데이터는 콜백 함수 sendEventToServer로 전달됩니다.
-4. sendEventToServer 함수는 이벤트 데이터를 JSON 형식으로 변환하여 서버의 API 엔드포인트(/api/save-event-data)로 POST 요청을 보냅니다.
-5. 서버는 요청을 받아 처리하고, 데이터를 db.json 파일이나 다른 데이터 스토리지에 저장합니다.
-
-이러한 프로세스는 사용자의 상호작용을 실시간으로 추적하고, 데이터를 중앙 서버에 저장하여 분석하는 데 사용될 수 있습니다.
-예를 들어, 웹사이트 사용성 개선, 사용자 경험 분석, 사용자 행동에 대한 인사이트 획득 등에 활용할 수 있습니다.
-
-데이터는 JSON 형식으로 저장되므로, 데이터 분석 도구나 대시보드에 쉽게 통합하여 시각화하고 분석할 수 있습니다.
-예를 들어, Google Analytics, Google BigQuery, AWS QuickSight 등 다양한 플랫폼과의 통합이 가능합니다.
-
-
-#### 종합
-
-이러한 방식으로 사용자 이벤트 데이터를 추적하고 관련 데이터를 수집 및 분석할 수 있습니다.
-해당 라이브러리는 웹사이트나 애플리케이션의 사용성 개선, 사용자 경험 최적화 등에 활용될 수 있습니다.
- */ 

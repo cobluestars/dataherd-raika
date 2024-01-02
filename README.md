@@ -9,19 +9,100 @@
 
 "Dataherd-Raika is a cutting-edge library designed to simulate large-scale user behavior datasets. It takes a single user event (like a click or keyword input) and, by applying simple probability distributions and custom variables, expands it into a vast dataset."
 
+
 ## 🐺사용법 및 예상 결과 : How to Use and Expected Results🐺
 
-### 1. 시작 및 종료 시간 설정: Setting Start and End Time
 
-```javascript
-setTimestampRange(new Date('2024-01-01T00:00:00'), new Date('2024-01-01T08:00:00'));
+### 1. 시작 및 종료 시간, 피크 타임 설정: Setting Start and End Time, Peak Times
+
+### 사용법: How To Use
+
+#### TimestampSettings 객체 정의: Defining the TimestampSettings Object
+
+```typescript
+
+export type TimestampSettings = {
+    startTime: string;
+    endTime: string;
+    peakTimes?: string[][];
+};
+
 ```
 
-- 이 함수는 이벤트 타임스탬프를 생성할 때 사용되는 시간 범위를 설정합니다. 2024-01-01 자정 ~ 오전 8시 사이의 랜덤한 타임스탬프를 생성하고 싶다면, 위 코드처럼 설정하면 됩니다.
+- startTime과 endTime은 이벤트 타임스탬프 생성에 사용되는 시작 및 종료 시간을 정의합니다.
+
+- peakTimes는 특정 시간대에 타임스탬프 생성 확률을 높이기 위한 설정입니다. 각 피크 타임은 시작 및 종료 시간의 문자열 배열로 정의됩니다.
 
 <br/>
 
-- This function sets the time range used for generating event timestamps. To create random timestamps between midnight and 8 AM on 2024-01-01, set it as shown in the code above.
+- startTime and endTime define the start and end times for generating event timestamps.
+
+- peakTimes is an optional setting to increase the probability of generating timestamps during specific time intervals. Each peak time interval is defined by an array of start and end time strings.
+
+
+#### 시간 설정 초기화 함수: Initialize Timestamp Settings
+
+```javascript
+
+initializeTimestampSettings({
+    startTime: '2024-01-01T00:00:00',
+    endTime: '2024-01-01T08:00:00',
+    peakTimes: [['2024-01-01T04:00:00', '2024-01-01T06:00:00'], ['2024-01-01T07:00:00', '2024-01-01T08:00:00']]
+});
+
+```
+
+- 이 함수는 TimestampSettings 객체를 사용하여 타임스탬프 생성에 필요한 시간 설정을 초기화합니다.
+
+- 위 예시에서는 2024년 1월 1일 자정부터 오전 8시 사이에 타임스탬프를 생성하도록 설정하며, 오전 4시부터 6시, 그리고 7시부터 8시 사이에 타임스탬프 생성 확률이 높아지도록 피크 타임을 설정합니다.
+
+<br/>
+
+- This function initializes the timestamp creation settings using the TimestampSettings object.
+
+- In the example above, the timestamp will be generated between midnight and 8 AM on January 1, 2024, with increased probability of generating timestamps between 4 AM to 6 AM and 7 AM to 8 AM.
+
+
+#### 랜덤 타임스탬프 생성 함수: Generating a Random Timestamp
+
+```javascript
+
+const timestamp = getRandomTimestamp();
+
+```
+
+- 이 함수는 설정된 시간 범위 내에서 랜덤 타임스탬프를 생성합니다.
+
+- 설정된 피크 타임이 있다면, 해당 시간대에 타임스탬프가 생성될 확률이 더 높습니다.
+
+- 이벤트 추적 함수 trackClickEvent, trackKeywordEvent를 사용할 경우, 두 함수들에 getRandomTimestamp 함수의 호출이 내장되어 있으므로, 특별한 경우가 아니라면 해당 함수는 호출하지 않아도 됩니다.
+
+<br/>
+
+- This function generates a random timestamp within the configured time range.
+
+- If peak times are set, there is a higher probability of generating a timestamp during those intervals.
+
+- When using event tracking functions such as 'trackClickEvent' and 'trackKeywordEvent', calls to 'getRandomTimestamp' are built into these functions, so there is usually no need to call it separately.
+
+
+### 예상 결과: Expected Results
+
+- getRandomTimestamp 함수는 initializeTimestampSettings 함수를 통해 설정된 시간 범위 및 피크 타임에 따라 랜덤 타임스탬프를 생성합니다.
+
+- 설정된 피크 타임이 있을 경우, 해당 시간대에 타임스탬프가 생성될 확률이 높아집니다.
+
+- 피크 타임이 없거나 유효하지 않은 경우, 설정된 시간 범위 내에서 균등하게 랜덤 타임스탬프가 생성됩니다.
+
+<br/>
+
+- The getRandomTimestamp function generates random timestamps according to the time range and peak times set by the initializeTimestampSettings function.
+
+- If peak times are set, there is a higher probability of generating timestamps during those specific intervals.
+
+- If there are no peak times set or if they are not valid, timestamps are generated uniformly within the configured time range.
+
+
 
 ### 2. 클릭 이벤트 & 특정 키워드 이벤트 횟수 조정: Adjusting Click Event & Specific Keyword Event Counts
 
@@ -35,6 +116,7 @@ setUserKeywordCount(25);
 <br/>
 
 - These functions set the count of data generated each time a user clicks or creates/searches a keyword.
+
 
 ### 3. 커스텀 데이터 설정: Setting Custom Data
 
@@ -318,38 +400,40 @@ The trackClickEvent and trackKeywordEvent functions are used to track user click
 
 - 작동 방식:
 
-함수는 정의된 횟수(userDefinedClickCount)만큼 클릭 이벤트 데이터를 생성합니다.
-이벤트 유형, 지정된 범위 내의 랜덤 타임스탬프, 클릭 횟수를 캡처합니다.
+1. 함수는 정의된 횟수(userDefinedClickCount)만큼 클릭 이벤트 데이터를 생성합니다.
+2. 이벤트 유형, 지정된 범위 내의 랜덤 타임스탬프, 클릭 횟수를 캡처합니다.
 
-includeLocalCustomData 또는 includeGlobalCustomData가 참이면, 이 이벤트 유형에 지역적으로 혹은 전역적으로 정의된 커스텀 데이터도 포함됩니다.
+3. includeLocalCustomData 또는 includeGlobalCustomData가 참이면, 이 이벤트 유형에 지역적으로 혹은 전역적으로 정의된 커스텀 데이터도 포함됩니다.
 
-옵션으로, 이벤트 데이터는 제공된 callback 함수에 전달됩니다.
+4. 옵션으로, 이벤트 데이터는 제공된 callback 함수에 전달됩니다.
 
 <br/>
 
 - How It Works:
 
-The function generates click event data for the defined number of times (userDefinedClickCount).
-It captures the event type, random timestamps within a specified range, and click count.
+1. The function generates click event data for the defined number of times (userDefinedClickCount).
+2. It captures the event type, random timestamps within a specified range, and click count.
 
-If includeLocalCustomData or includeGlobalCustomData is true, the respective custom data is also included.
+3. If includeLocalCustomData or includeGlobalCustomData is true, the respective custom data is also included.
 
-Optionally, the event data is passed to the provided callback function.
+4. Optionally, the event data is passed to the provided callback function.
 
 <br/>
 <br/>
 
 - 목적:
-사용자 클릭 이벤트를 추적하고 관련 데이터를 수집합니다.
-표준 및 커스텀 데이터를 캡처하는 유연성을 제공합니다.
-콜백을 통해 이 데이터의 사후 처리 또는 처리를 가능하게 합니다.
+
+1. 사용자 클릭 이벤트를 추적하고 관련 데이터를 수집합니다.
+2. 표준 및 커스텀 데이터를 캡처하는 유연성을 제공합니다.
+3. 콜백을 통해 이 데이터의 사후 처리 또는 처리를 가능하게 합니다.
 
 <br/>
 
 - Purpose:
-Tracks user click events and collects related data.
-Provides flexibility in capturing standard and custom data.
-Enables post-processing or handling of this data through a callback.
+
+1. Tracks user click events and collects related data.
+2. Provides flexibility in capturing standard and custom data.
+3. Enables post-processing or handling of this data through a callback.
 
 ### 사용법: How To Use
 
@@ -366,15 +450,15 @@ document.getElementById('elementB').addEventListener('click', (event) => {
 
 - elementA 클릭 시
 
-로컬 커스텀 데이터(clickEventCategoryA 그룹에 정의된 데이터)가 클릭 이벤트 데이터에 포함되어 전송됩니다.
-이 데이터는 trackClickEvent 함수의 세 번째 매개변수로 true를 지정하여 로컬 커스텀 데이터를 포함하도록 (전역 커스텀 데이터 포함 여부: false) 설정합니다.
+1. 로컬 커스텀 데이터(clickEventCategoryA 그룹에 정의된 데이터)가 클릭 이벤트 데이터에 포함되어 전송됩니다.
+2. 이 데이터는 trackClickEvent 함수의 세 번째 매개변수로 true를 지정하여 로컬 커스텀 데이터를 포함하도록 (전역 커스텀 데이터 포함 여부: false) 설정합니다.
 
 <br/>
 
 - On Clicking elementA
 
-Local custom data (defined in the clickEventCategoryA group) is included and sent with the click event data.
-This data is set to be included (with global custom data set to false) by specifying true as the third parameter in the trackClickEvent function.
+1. Local custom data (defined in the clickEventCategoryA group) is included and sent with the click event data.
+2. This data is set to be included (with global custom data set to false) by specifying true as the third parameter in the trackClickEvent function.
 
 ```json
 {
@@ -390,15 +474,15 @@ This data is set to be included (with global custom data set to false) by specif
 
 - elementB 클릭 시
 
-전역 커스텀 데이터(GlobalUserDefinedItems에 정의된 데이터)가 클릭 이벤트 데이터에 포함되어 전송됩니다.
-이 데이터는 trackClickEvent 함수의 네 번째 매개변수로 true를 지정하여 전역 커스텀 데이터를 포함하도록 (지역 커스텀 데이터 포함 여부: false) 설정합니다.
+1. 전역 커스텀 데이터(GlobalUserDefinedItems에 정의된 데이터)가 클릭 이벤트 데이터에 포함되어 전송됩니다.
+2. 이 데이터는 trackClickEvent 함수의 네 번째 매개변수로 true를 지정하여 전역 커스텀 데이터를 포함하도록 (지역 커스텀 데이터 포함 여부: false) 설정합니다.
 
 <br/>
 
 - On Clicking elementB
 
-Global custom data (defined in GlobalUserDefinedItems) is included and sent with the click event data.
-This data is set to be included (with local custom data set to false) by specifying true as the fourth parameter in the trackClickEvent function.
+1. Global custom data (defined in GlobalUserDefinedItems) is included and sent with the click event data.
+2. This data is set to be included (with local custom data set to false) by specifying true as the fourth parameter in the trackClickEvent function.
 
 ```json
 {
@@ -426,7 +510,7 @@ This data is set to be included (with local custom data set to false) by specify
 3. includeLocalCustomData: 이 이벤트 유형에 특정한 로컬 커스텀 데이터를 포함할지 결정하는 여부. (true/false)
 4. includeGlobalCustomData: 전역적으로 정의된 커스텀 데이터를 포함할지 결정하는 여부. (true/false)
 5. repeatCount: 키워드 이벤트가 발생하는 진짜 횟수. (해당 값과 키워드 이벤트 카운트 값을 비교 분석하여, 도배글 작성과 같이 특정 키워드가 비정상적으로 반복되는 사항을 필터링할 수 있습니다.)
-5. callback: 이벤트 데이터를 수집한 후 호출될 함수. 옵션으로 선택 가능.
+6. callback: 이벤트 데이터를 수집한 후 호출될 함수. 옵션으로 선택 가능.
 
 <br/>
 
@@ -444,36 +528,35 @@ This data is set to be included (with local custom data set to false) by specify
 
 - 작동 방식:
 
-함수는 지정된 횟수(userDefinedKeywordCount)만큼 키워드 이벤트 데이터를 생성합니다.
-키워드, 이벤트 유형, 랜덤 타임스탬프, 키워드 발생 횟수를 캡처합니다.
+1. 함수는 지정된 횟수(userDefinedKeywordCount)만큼 키워드 이벤트 데이터를 생성합니다.
+2. 키워드, 이벤트 유형, 랜덤 타임스탬프, 키워드 발생 횟수를 캡처합니다.
 includeLocalCustomData 또는 includeGlobalCustomData가 선택되면 추가 커스텀 데이터가 포함됩니다.
-수집된 데이터는 제공된 callback 함수에 전달됩니다.
+3. 수집된 데이터는 제공된 callback 함수에 전달됩니다.
 
 <br/>
 
 - How It Works:
 
-The function generates keyword event data for the specified number of times (userDefinedKeywordCount).
-It captures the keyword, event type, random timestamp, and the occurrence count of the keyword.
-If includeLocalCustomData or includeGlobalCustomData is selected, additional custom data is included.
-The collected data is passed to the provided callback function.
+1. The function generates keyword event data for the specified number of times (userDefinedKeywordCount).
+2, It captures the keyword, event type, random timestamp, and the occurrence count of the keyword. If includeLocalCustomData or includeGlobalCustomData is selected, additional custom data is included.
+3, The collected data is passed to the provided callback function.
 
 <br/>
 <br/>
 
 - 목적:
 
-사용자가 입력한 키워드와 관련된 이벤트를 추적합니다.
-이러한 이벤트에 대한 자세한 데이터를 수집합니다.
-콜백을 통해 이벤트 사후 처리 또는 작업을 가능하게 합니다.
+1. 사용자가 입력한 키워드와 관련된 이벤트를 추적합니다.
+2. 이러한 이벤트에 대한 자세한 데이터를 수집합니다.
+3. 콜백을 통해 이벤트 사후 처리 또는 작업을 가능하게 합니다.
 
 <br/>
 
 - Purpose:
 
-Tracks events related to keywords entered by users.
-Collects detailed data on these events.
-Enables post-event processing or tasks through a callback.
+1. Tracks events related to keywords entered by users.
+2. Collects detailed data on these events.
+3. Enables post-event processing or tasks through a callback.
 
 
 ### 사용법: How To Use
@@ -563,12 +646,15 @@ Event tracking functions (trackClickEvent or trackKeywordEvent) can send event d
 4. sendEventToServer 함수는 이벤트 데이터를 JSON 형식으로 변환하여 서버의 API 엔드포인트(/api/save-event-data)로 POST 요청을 보냅니다.
 5. 서버는 요청을 받아 처리하고, 데이터를 db.json 파일이나 다른 데이터 스토리지에 저장합니다.
 
+<br/>
+
 이러한 프로세스는 사용자의 상호작용을 실시간으로 추적하고, 데이터를 중앙 서버에 저장하여 분석하는 데 사용될 수 있습니다.
 예를 들어, 웹사이트 사용성 개선, 사용자 경험 분석, 사용자 행동에 대한 인사이트 획득 등에 활용할 수 있습니다.
 
 데이터는 JSON 형식으로 저장되므로, 데이터 분석 도구나 대시보드에 쉽게 통합하여 시각화하고 분석할 수 있습니다. 
 예를 들어, Google Analytics, Google BigQuery, AWS QuickSight 등 다양한 플랫폼과의 통합이 가능합니다.
 
+<br/>
 <br/>
 
 - Using the above callback functions for event tracking, the data is processed as follows:
@@ -578,6 +664,8 @@ Event tracking functions (trackClickEvent or trackKeywordEvent) can send event d
 3. The generated event data is passed to the callback function sendEventToServer.
 4. The sendEventToServer function converts the event data into JSON format and sends a POST request to the server's API endpoint (/api/save-event-data).
 5. The server receives and processes the request, storing the data in a db.json file or other data storage.
+
+<br/>
 
 This process can be used to track user interactions in real-time, store data in a central server for analysis, and can be utilized for various purposes such as improving website usability, analyzing user experience, and gaining insights into user behavior.
 
