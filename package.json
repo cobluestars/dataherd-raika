@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "main": "./src/trackUserEvents.js",
   "types": "./src/trackUserEvents.d.ts",
+  "icon": "./assets/dataherd-raika.png",
   "scripts": {
     "test": "jest",
     "build": "webpack --mode production",
