@@ -373,7 +373,7 @@ export function createRandomData(items: UserDefinedItem[]): Record<string, any> 
     return randomData;
 }
 
-/** 확률 설정 함수: 배열, 객체의 각 항목에 확률을 설정 / 확률 설정하지 않은 나머지 항목들은 나머지 확률이 나뉘어서 균등하게 분배 */
+/** 확률 설정 함수: 배열, 객체의 각 항목에 확률을 설정 / 확률 설정하지 않은 나머지 항목들 중 최소 하나가 선택될 확률을 100%로 설정 */
 function settingProbabilities(
     options: (number | string | object)[],
     settings: ProbabilitySetting[],
@@ -410,43 +410,47 @@ function settingProbabilities(
         }
     });
 
-    // 남은 확률 계산 및 할당 (지정되지 않은 항목(들)에 확률을 고르게 분배하여 할당)
-    const remainingProbability = 100 - totalAssignedProbability;
-    const numberOfUnassignedItems = probabilities.filter(p => p === 0).length;
-    const probabilityForEachUnassignedItem = numberOfUnassignedItems > 0 ? remainingProbability / numberOfUnassignedItems : 0;
+    // 확률 설정이 적용되지 않은 나머지 항목들에 대해, 최소 하나가 선택될 확률을 100%로 설정
+    if (totalAssignedProbability < 100) {
+        const unassignedProbabilities = probabilities.filter(p => p === 0);
+        const remainingProbabilityPerItem = (100 - totalAssignedProbability) / unassignedProbabilities.length;
 
-    probabilities = probabilities.map(p => p === 0 ? probabilityForEachUnassignedItem : p);
+        probabilities = probabilities.map(p => p === 0 ? remainingProbabilityPerItem : p);
+    }
 
     return probabilities;
 }
 
 /** 세팅된 확률로 항목(들)을 선택하게 하는 함수 */
 function applyProbabilityBasedSelection(
-    options: ( string | number | object )[],
+    options: (string | number | object)[],
     probabilities: number[]
-): ( string | number | object )[] {
-    let selectedOptions: ( string | number | object )[] = [];
-    let unselectedRandomOptions: ( string | number | object )[] = [];
+): (string | number | object)[] {
+    let selectedOptions: (string | number | object)[] = [];
 
+    // 먼저 확률에 따라 항목들을 선택
     options.forEach((option, index) => {
         if (Math.random() * 100 < probabilities[index]) {
             selectedOptions.push(option);
-        } else if (probabilities[index] === 0) {
-            // 확률 설정이 지정되지 않은 항목들
-            unselectedRandomOptions.push(option);
         }
     });
 
-    // 아무 항목도 선택되지 않았고, 확률 설정이 지정되지 않은 항목이 있다면 그 중 하나를 무작위로 선택
-    if (selectedOptions.length === 0 && unselectedRandomOptions.length > 0) {
-        const randomIndex = Math.floor(Math.random() * unselectedRandomOptions.length);
-        selectedOptions.push(unselectedRandomOptions[randomIndex]);
+    // 선택된 항목이 없다면, 확률 설정되지 않은 항목들 중 하나를 무작위로 선택
+    if (selectedOptions.length === 0) {
+        const unselectedOptions = options.filter((_, index) => probabilities[index] === 0);
+        if (unselectedOptions.length > 0) {
+            const randomIndex = Math.floor(Math.random() * unselectedOptions.length);
+            selectedOptions.push(unselectedOptions[randomIndex]);
+        } else {
+            // 확률 설정된 항목이 없을 경우, 전체 항목 중에서 무작위로 하나 선택
+            const randomIndex = Math.floor(Math.random() * options.length);
+            selectedOptions.push(options[randomIndex]);
+        }
     }
 
     return selectedOptions;
 }
-
-    
+ 
 /**
  * 배열, 객체에서의 재귀 알고리즘 활용 방안 
  * (주의: name, type, options 정의 및 설계를 정확히 하십시오.)

@@ -10,7 +10,7 @@
 "Dataherd-Raika is a cutting-edge library designed to simulate large-scale user behavior datasets. It takes a single user event (like a click or keyword input) and, by applying simple probability distributions and custom variables, expands it into a vast dataset."
 
 
-## 🐺사용법 및 예상 결과 : How to Use and Expected Results🐺
+## 🐺사용법 및 예상 결과 : How to Use & Expected Results🐺
 
 
 ### 1. 시작 및 종료 시간, 피크 타임 설정: Setting Start and End Time, Peak Times
