@@ -137,21 +137,8 @@ function createRandomData(items) {
                         // 랜덤 요소 선택
                         if (selectionProbability) {
                             //확률 기반 선택 적용
-                            var probabilities_1 = settingProbabilities(item.options, item.probabilitySetting || [], false);
-                            var selectedOptions = applyProbabilityBasedSelection(item.options, probabilities_1);
-                            /** 빈 항목이 선택되는 경우에 대한 임시방편 */
-                            // 첫 번째 시도에서 선택된 항목이 없다면, 다시 시도
-                            if (selectedOptions.length === 0) {
-                                selectedOptions = applyProbabilityBasedSelection(item.options, probabilities_1);
-                                // 두 번째 시도에서도 선택된 항목이 없다면, 확률 설정을 따르지 않는 항목 중 무작위 선택
-                                if (selectedOptions.length === 0) {
-                                    var unselectedOptions = item.options.filter(function (_, index) { return !probabilities_1[index]; });
-                                    if (unselectedOptions.length > 0) {
-                                        var randomIndex = Math.floor(Math.random() * unselectedOptions.length);
-                                        selectedOptions = [unselectedOptions[randomIndex]];
-                                    }
-                                }
-                            }
+                            var probabilities = settingProbabilities(item.options, item.probabilitySetting || [], false);
+                            var selectedOptions = applyProbabilityBasedSelection(item.options, probabilities);
                             // 선택된 항목 수가 arraySelectionCount를 초과하지 않도록 조정
                             selectedOptions = selectedOptions.slice(0, arraySelectionCount);
                             // 선택된 항목 처리
@@ -201,30 +188,17 @@ function createRandomData(items) {
                     var options_1 = item.options;
                     if (randomizeObjects) {
                         // 객체 속성의 랜덤 선택 처리
-                        var selectedOptionKeys_1 = [];
+                        var selectedOptionKeys = [];
                         if (selectionProbability) {
                             // 확률 기반 선택 적용
                             var keys = Object.keys(options_1);
                             var probabilities = settingProbabilities(keys, item.probabilitySetting || [], true);
-                            selectedOptionKeys_1 = applyProbabilityBasedSelection(keys, probabilities);
-                            /** 빈 항목이 선택되는 경우에 대한 임시방편 */
-                            // 첫 번째 시도에서 선택된 속성이 없다면, 다시 시도
-                            if (selectedOptionKeys_1.length === 0) {
-                                selectedOptionKeys_1 = applyProbabilityBasedSelection(keys, probabilities);
-                                // 두 번째 시도에서도 선택된 속성이 없다면, 확률 설정을 따르지 않는 속성 중 무작위 선택
-                                if (selectedOptionKeys_1.length === 0) {
-                                    var unselectedKeys = keys.filter(function (key) { return !selectedOptionKeys_1.includes(key); });
-                                    if (unselectedKeys.length > 0) {
-                                        var randomIndex = Math.floor(Math.random() * unselectedKeys.length);
-                                        selectedOptionKeys_1 = [unselectedKeys[randomIndex]];
-                                    }
-                                }
-                            }
+                            selectedOptionKeys = applyProbabilityBasedSelection(keys, probabilities);
                             // 선택된 속성 수가 objectSelectionCount를 초과하지 않도록 조정
-                            selectedOptionKeys_1 = selectedOptionKeys_1.slice(0, objectSelectionCount);
+                            selectedOptionKeys = selectedOptionKeys.slice(0, objectSelectionCount);
                             if (randomizeSelectionCount) {
                                 // 선택 갯수 내에서 무작위 선택 적용
-                                selectedOptionKeys_1 = selectedOptionKeys_1.slice(0, Math.floor(Math.random() * selectedOptionKeys_1.length) + 1);
+                                selectedOptionKeys = selectedOptionKeys.slice(0, Math.floor(Math.random() * selectedOptionKeys.length) + 1);
                             }
                         }
                         else {
@@ -234,10 +208,10 @@ function createRandomData(items) {
                             if (randomizeSelectionCount) {
                                 selectedCount = Math.floor(Math.random() * selectedCount) + 1;
                             }
-                            selectedOptionKeys_1 = keys.sort(function () { return 0.5 - Math.random(); }).slice(0, selectedCount);
+                            selectedOptionKeys = keys.sort(function () { return 0.5 - Math.random(); }).slice(0, selectedCount);
                         }
                         // 최종 선택된 속성들에 대한 처리
-                        selectedOptionKeys_1.forEach(function (key) {
+                        selectedOptionKeys.forEach(function (key) {
                             var subItem = options_1[key];
                             if (subItem && typeof subItem === 'object' && 'name' in subItem && 'type' in subItem) {
                                 // subItem이 UserDefinedItem 타입인 경우, 재귀적으로 createRandomData 호출
@@ -320,11 +294,21 @@ function settingProbabilities(options, settings, isObject //객체일 경우 tru
 /** 세팅된 확률로 항목(들)을 선택하게 하는 함수 */
 function applyProbabilityBasedSelection(options, probabilities) {
     var selectedOptions = [];
+    var unselectedRandomOptions = [];
     options.forEach(function (option, index) {
         if (Math.random() * 100 < probabilities[index]) {
             selectedOptions.push(option);
         }
+        else if (probabilities[index] === 0) {
+            // 확률 설정이 지정되지 않은 항목들
+            unselectedRandomOptions.push(option);
+        }
     });
+    // 아무 항목도 선택되지 않았고, 확률 설정이 지정되지 않은 항목이 있다면 그 중 하나를 무작위로 선택
+    if (selectedOptions.length === 0 && unselectedRandomOptions.length > 0) {
+        var randomIndex = Math.floor(Math.random() * unselectedRandomOptions.length);
+        selectedOptions.push(unselectedRandomOptions[randomIndex]);
+    }
     return selectedOptions;
 }
 //사용자 클릭 이벤트 리스너 추적 함수 Click Event Listener

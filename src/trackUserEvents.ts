@@ -172,21 +172,6 @@ export function createRandomData(items: UserDefinedItem[]): Record<string, any> 
                             const probabilities = settingProbabilities(item.options, item.probabilitySetting || [], false);
                             let selectedOptions = applyProbabilityBasedSelection(item.options, probabilities);
 
-                            /** 빈 항목이 선택되는 경우에 대한 임시방편 */
-                            // 첫 번째 시도에서 선택된 항목이 없다면, 다시 시도
-                            if (selectedOptions.length === 0) {
-                                selectedOptions = applyProbabilityBasedSelection(item.options, probabilities);
-
-                                // 두 번째 시도에서도 선택된 항목이 없다면, 확률 설정을 따르지 않는 항목 중 무작위 선택
-                                if (selectedOptions.length === 0) {
-                                    const unselectedOptions = item.options.filter((_, index) => !probabilities[index]);
-                                    if (unselectedOptions.length > 0) {
-                                        const randomIndex = Math.floor(Math.random() * unselectedOptions.length);
-                                        selectedOptions = [unselectedOptions[randomIndex]];
-                                    }
-                                }
-                            }
-
                             // 선택된 항목 수가 arraySelectionCount를 초과하지 않도록 조정
                             selectedOptions = selectedOptions.slice(0, arraySelectionCount);
 
@@ -242,22 +227,7 @@ export function createRandomData(items: UserDefinedItem[]): Record<string, any> 
                             const keys = Object.keys(options);
                             const probabilities = settingProbabilities(keys, item.probabilitySetting || [], true);
                             selectedOptionKeys = applyProbabilityBasedSelection(keys, probabilities) as string[];
- 
-                            /** 빈 항목이 선택되는 경우에 대한 임시방편 */
-                            // 첫 번째 시도에서 선택된 속성이 없다면, 다시 시도
-                            if (selectedOptionKeys.length === 0) {
-                                selectedOptionKeys = applyProbabilityBasedSelection(keys, probabilities) as string[];
-
-                                // 두 번째 시도에서도 선택된 속성이 없다면, 확률 설정을 따르지 않는 속성 중 무작위 선택
-                                if (selectedOptionKeys.length === 0) {
-                                    const unselectedKeys = keys.filter(key => !selectedOptionKeys.includes(key));
-                                    if (unselectedKeys.length > 0) {
-                                        const randomIndex = Math.floor(Math.random() * unselectedKeys.length);
-                                        selectedOptionKeys = [unselectedKeys[randomIndex]];
-                                    }
-                                }
-                            }
- 
+  
                             // 선택된 속성 수가 objectSelectionCount를 초과하지 않도록 조정
                             selectedOptionKeys = selectedOptionKeys.slice(0, objectSelectionCount);
             
@@ -363,15 +333,28 @@ function settingProbabilities(
 function applyProbabilityBasedSelection(
     options: ( string | number | object )[],
     probabilities: number[]
-): (  string | number | object )[] {
+): ( string | number | object )[] {
     let selectedOptions: ( string | number | object )[] = [];
+    let unselectedRandomOptions: ( string | number | object )[] = [];
+
     options.forEach((option, index) => {
         if (Math.random() * 100 < probabilities[index]) {
             selectedOptions.push(option);
+        } else if (probabilities[index] === 0) {
+            // 확률 설정이 지정되지 않은 항목들
+            unselectedRandomOptions.push(option);
         }
     });
+
+    // 아무 항목도 선택되지 않았고, 확률 설정이 지정되지 않은 항목이 있다면 그 중 하나를 무작위로 선택
+    if (selectedOptions.length === 0 && unselectedRandomOptions.length > 0) {
+        const randomIndex = Math.floor(Math.random() * unselectedRandomOptions.length);
+        selectedOptions.push(unselectedRandomOptions[randomIndex]);
+    }
+
     return selectedOptions;
 }
+
     
 /**
  * 배열, 객체에서의 재귀 알고리즘 활용 방안 

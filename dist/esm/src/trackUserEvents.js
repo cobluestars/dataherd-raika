@@ -122,19 +122,6 @@ export function createRandomData(items) {
                             //확률 기반 선택 적용
                             const probabilities = settingProbabilities(item.options, item.probabilitySetting || [], false);
                             let selectedOptions = applyProbabilityBasedSelection(item.options, probabilities);
-                            /** 빈 항목이 선택되는 경우에 대한 임시방편 */
-                            // 첫 번째 시도에서 선택된 항목이 없다면, 다시 시도
-                            if (selectedOptions.length === 0) {
-                                selectedOptions = applyProbabilityBasedSelection(item.options, probabilities);
-                                // 두 번째 시도에서도 선택된 항목이 없다면, 확률 설정을 따르지 않는 항목 중 무작위 선택
-                                if (selectedOptions.length === 0) {
-                                    const unselectedOptions = item.options.filter((_, index) => !probabilities[index]);
-                                    if (unselectedOptions.length > 0) {
-                                        const randomIndex = Math.floor(Math.random() * unselectedOptions.length);
-                                        selectedOptions = [unselectedOptions[randomIndex]];
-                                    }
-                                }
-                            }
                             // 선택된 항목 수가 arraySelectionCount를 초과하지 않도록 조정
                             selectedOptions = selectedOptions.slice(0, arraySelectionCount);
                             // 선택된 항목 처리
@@ -190,19 +177,6 @@ export function createRandomData(items) {
                             const keys = Object.keys(options);
                             const probabilities = settingProbabilities(keys, item.probabilitySetting || [], true);
                             selectedOptionKeys = applyProbabilityBasedSelection(keys, probabilities);
-                            /** 빈 항목이 선택되는 경우에 대한 임시방편 */
-                            // 첫 번째 시도에서 선택된 속성이 없다면, 다시 시도
-                            if (selectedOptionKeys.length === 0) {
-                                selectedOptionKeys = applyProbabilityBasedSelection(keys, probabilities);
-                                // 두 번째 시도에서도 선택된 속성이 없다면, 확률 설정을 따르지 않는 속성 중 무작위 선택
-                                if (selectedOptionKeys.length === 0) {
-                                    const unselectedKeys = keys.filter(key => !selectedOptionKeys.includes(key));
-                                    if (unselectedKeys.length > 0) {
-                                        const randomIndex = Math.floor(Math.random() * unselectedKeys.length);
-                                        selectedOptionKeys = [unselectedKeys[randomIndex]];
-                                    }
-                                }
-                            }
                             // 선택된 속성 수가 objectSelectionCount를 초과하지 않도록 조정
                             selectedOptionKeys = selectedOptionKeys.slice(0, objectSelectionCount);
                             if (randomizeSelectionCount) {
@@ -301,11 +275,21 @@ function settingProbabilities(options, settings, isObject = false //객체일 �
 /** 세팅된 확률로 항목(들)을 선택하게 하는 함수 */
 function applyProbabilityBasedSelection(options, probabilities) {
     let selectedOptions = [];
+    let unselectedRandomOptions = [];
     options.forEach((option, index) => {
         if (Math.random() * 100 < probabilities[index]) {
             selectedOptions.push(option);
         }
+        else if (probabilities[index] === 0) {
+            // 확률 설정이 지정되지 않은 항목들
+            unselectedRandomOptions.push(option);
+        }
     });
+    // 아무 항목도 선택되지 않았고, 확률 설정이 지정되지 않은 항목이 있다면 그 중 하나를 무작위로 선택
+    if (selectedOptions.length === 0 && unselectedRandomOptions.length > 0) {
+        const randomIndex = Math.floor(Math.random() * unselectedRandomOptions.length);
+        selectedOptions.push(unselectedRandomOptions[randomIndex]);
+    }
     return selectedOptions;
 }
 //사용자 클릭 이벤트 리스너 추적 함수 Click Event Listener
