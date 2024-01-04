@@ -25,8 +25,7 @@ declare module "dataherd-raika" {
     
     //시간 설정 초기화 함수
     export function initializeTimestampSettings(settings: TimestampSettings): void
-
-    
+  
     // 사용자 클릭 이벤트 데이터 인터페이스
     export interface ClickEventData {
         eventType: string;
@@ -58,6 +57,9 @@ declare module "dataherd-raika" {
         arraySelectionCount?: number; //배열에서 선택할 항목 수 (디폴트: 1)
         objectSelectionCount?: number; //객체에서 선택할 항목 수 (디폴트: 1)
         randomizeSelectionCount?: boolean; //선택한 항목 수 내에서 무작위 선택 여부
+
+        /**🐺 Ver 1.1.0: 캐시 데이터 설정을 위한 타입 🐺*/
+        cacheSettings?: CacheDataSettings; // 캐시 데이터 설정
     }
 
     //확률 설정을 위한 타입
@@ -65,6 +67,13 @@ declare module "dataherd-raika" {
         identifier: number | string;
         probability: number;
     }
+
+    /**🐺 Ver 1.1.0: 캐시 데이터 시뮬레이션 설정을 위한 타입 🐺*/
+    export type CacheDataSettings = {
+        enableCacheSimulation: boolean; // 캐시 데이터 시뮬레이션 활성화 여부
+        simulatedCacheSize: number; // 시뮬레이션 캐시 데이터의 크기 (예: MB 단위)
+        simulatedDelay: number; // 데이터 처리 시 인위적인 지연 시간 (예: 밀리초 단위)
+    };
 
     /** 전역/로컬 커스텀 데이터 항목 정의 및 설정 */
 
@@ -85,7 +94,7 @@ declare module "dataherd-raika" {
 
 
     /** 랜덤 데이터 생성 함수  */
-    export function createRandomData(items: UserDefinedItem[]): Record<string, any>;
+    export function createRandomData(items: UserDefinedItem[], isRecursive: boolean): { randomData: Record<string, any>, cacheImpact?: any }
 
     // 정규 분포에 따른 랜덤 숫자 생성 함수
     export function gaussianRandom(mean: number, standardDeviation: number): number;

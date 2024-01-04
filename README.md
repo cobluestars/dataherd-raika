@@ -1,6 +1,6 @@
 # 🐺dataherd-raika🐺
 
-![dataherd-raika](./assets/dataherd-raika.png)
+![dataherd-raika](https://raw.githubusercontent.com/cobluestars/dataherd-raika/main/assets/dataherd-raika.png)
 
 
 "Dataherd-raika는 대규모 사용자 행동 데이터셋을 시뮬레이션하기 위해 설계된 라이브러리입니다. 하나의 사용자 이벤트(예: 클릭 또는 키워드 입력)를 취하여 간단한 확률 분포와 사용자 정의 변수를 적용, 광범위한 데이터셋으로 확장합니다."
@@ -9,15 +9,24 @@
 
 "Dataherd-Raika is a cutting-edge library designed to simulate large-scale user behavior datasets. It takes a single user event (like a click or keyword input) and, by applying simple probability distributions and custom variables, expands it into a vast dataset."
 
+<br/>
+<br/>
 
-## 🐺사용법 및 예상 결과 : How to Use & Expected Results🐺
+## 🐺사용법 & 예상 결과: How to Use & Expected Results🐺
 
+<br/>
 
 ### 1. 시작 및 종료 시간, 피크 타임 설정: Setting Start and End Time, Peak Times
 
+<br/>
+
 ### 사용법: How To Use
 
+<br/>
+
 #### TimestampSettings 객체 정의: Defining the TimestampSettings Object
+
+<br/>
 
 ```typescript
 
@@ -28,6 +37,7 @@ export type TimestampSettings = {
 };
 
 ```
+<br/>
 
 - startTime과 endTime은 이벤트 타임스탬프 생성에 사용되는 시작 및 종료 시간을 정의합니다.
 
@@ -39,8 +49,11 @@ export type TimestampSettings = {
 
 - peakTimes is an optional setting to increase the probability of generating timestamps during specific time intervals. Each peak time interval is defined by an array of start and end time strings.
 
+<br/>
 
 #### 시간 설정 초기화 함수: Initialize Timestamp Settings
+
+<br/>
 
 ```javascript
 
@@ -51,6 +64,7 @@ initializeTimestampSettings({
 });
 
 ```
+<br/>
 
 - 이 함수는 TimestampSettings 객체를 사용하여 타임스탬프 생성에 필요한 시간 설정을 초기화합니다.
 
@@ -62,6 +76,7 @@ initializeTimestampSettings({
 
 - In the example above, the timestamp will be generated between midnight and 8 AM on January 1, 2024, with increased probability of generating timestamps between 4 AM to 6 AM and 7 AM to 8 AM.
 
+<br/>
 
 #### 랜덤 타임스탬프 생성 함수: Generating a Random Timestamp
 
@@ -70,6 +85,8 @@ initializeTimestampSettings({
 const timestamp = getRandomTimestamp();
 
 ```
+
+<br/>
 
 - 이 함수는 설정된 시간 범위 내에서 랜덤 타임스탬프를 생성합니다.
 
@@ -85,8 +102,11 @@ const timestamp = getRandomTimestamp();
 
 - When using event tracking functions such as 'trackClickEvent' and 'trackKeywordEvent', calls to 'getRandomTimestamp' are built into these functions, so there is usually no need to call it separately.
 
+<br/>
 
 ### 예상 결과: Expected Results
+
+<br/>
 
 - getRandomTimestamp 함수는 initializeTimestampSettings 함수를 통해 설정된 시간 범위 및 피크 타임에 따라 랜덤 타임스탬프를 생성합니다.
 
@@ -102,7 +122,8 @@ const timestamp = getRandomTimestamp();
 
 - If there are no peak times set or if they are not valid, timestamps are generated uniformly within the configured time range.
 
-
+<br/>
+<br/>
 
 ### 2. 클릭 이벤트 & 특정 키워드 이벤트 횟수 조정: Adjusting Click Event & Specific Keyword Event Counts
 
@@ -111,12 +132,16 @@ setUserClickCount(25);
 setUserKeywordCount(25);
 ```
 
+<br/>
+
 - 이 함수들은 사용자가 클릭하거나, 키워드를 생성/검색할 때마다, 적용되는 카운트, 만들어지는 데이터 수를 설정합니다.
 
 <br/>
 
 - These functions set the count of data generated each time a user clicks or creates/searches a keyword.
 
+<br/>
+<br/>
 
 ### 3. 커스텀 데이터 설정: Setting Custom Data
 
@@ -166,8 +191,38 @@ export type UserDefinedItem = {
     randomizeSelectionCount?: boolean; //선택한 항목 수 내에서 무작위 선택 여부 (ex: 선택 항목: 3일 시, 1개 ~ 3개의 항목이 선택될 수 있음.) (디폴트: 1)
                                        // Whether to randomly select within the chosen number of items 
                                        // (e.g., If selection items: 3, then 1 to 3 items can be selected.) (default: 1)
+
+    /** 🐺 Ver 1.1.0: 캐시 데이터 설정을 위한 타입
+     *                Type for Cache Data Settings 🐺 */
+
+    cacheSettings?: CacheDataSettings; // 캐시 데이터 설정
+                                       // Cache Data Settings
+                                   
+};
+
+// 확률 설정을 위한 타입
+// Type for Probability Setting
+export type ProbabilitySetting = {
+    identifier: number | string;    //배열/객체의 인덱스 혹은 항목명으로 확률 부여할 대상을 정함.
+                                    // Identifies the target for probability assignment by array/object index or item name.
+    probability: number;    //확률 부여 (0~100)
+                            // Probability assignment (0~100)
+}
+
+/**🐺 Ver 1.1.0: 캐시 데이터 시뮬레이션 설정을 위한 타입
+ *               Type for Cache Data Simulation Settings 🐺*/
+
+export type CacheDataSettings = {
+    enableCacheSimulation: boolean; // 캐시 데이터 시뮬레이션 활성화 여부
+                                    // Whether to enable cache data simulation
+    simulatedCacheSize: number;     // 시뮬레이션 캐시 데이터의 크기 (예: MB 단위)
+                                    // Size of simulated cache data (e.g., in MB)
+    simulatedDelay: number;         // 데이터 처리 시 인위적인 지연 시간 (예: 밀리초 단위)
+                                    // Artificial delay time in data processing (e.g., in milliseconds)
 };
 ```
+
+<br/>
 
 ### 사용법: How To Use
 
@@ -177,6 +232,7 @@ export type UserDefinedItem = {
 
 ❗Caution: Ensure the definition and design of name, type, options, and probability are accurate.❗
 
+<br/>
 
 ```typescript
 const UserDefinedItems: UserDefinedItem[] = [
@@ -254,7 +310,7 @@ const UserDefinedItems: UserDefinedItem[] = [
             { identifier: 0, probability: 10 }, //(10%: student)
             { identifier: 1, probability: 45 }, //(45%: developer)
             { identifier: 2, probability: 45 }, //(45%: accountant)
-        ]
+        ],
     },
     {
         name: 'favorite drinks',
@@ -269,23 +325,47 @@ const UserDefinedItems: UserDefinedItem[] = [
         randomizeObjects: true,
         objectSelectionCount: 3,
         randomizeSelectionCount: true   
+    },
+
+    /** 🐺 Ver 1.1.0 🐺: 캐시 데이터 & 시간 지연 로직 추가
+                          Added Cache Data & Time Delay Logic */
+    {
+        name: 'cache-data',
+        type: 'object',
+        cacheSettings: {
+            enableCacheSimulation: true,
+            simulatedCacheSize: 1, // 1MB의 무의미한 텍스트 캐시 데이터
+                                   // 1MB of nonsensical text cache data
+            simulatedDelay: 500    // 500ms 지연
+                                   // 500ms delay
+        }
     }
 ];
 ```
+<br/>
 
 ### 예상 결과: Expected Results
 
-- 커스텀 데이터가 이벤트 데이터에 포함됩니다. 예를 들어, 사용자의 나이, 직업, 연봉, 선호 음료, 취미 등이 데이터에 포함될 수 있습니다.
+- 커스텀 데이터가 이벤트 데이터에 포함됩니다. 예를 들어, 사용자의 나이, 직업, 연봉, 선호 음료, 취미, 캐시 데이터 등이 데이터에 포함될 수 있습니다.
 
 <br/>
 
-- Custom data is included in the event data. For example, user information such as age, job, salary, preferred drinks, and hobbies can be included in the data.
-
+- Custom data is included in the event data. For example, user information such as age, job, salary, preferred drinks, hobbies, and cache-data can be included in the data.
 
 ```json
 {
     "eventType": "click",
     "timestamp": "2024-01-01T19:40:47.615Z",
+    "cacheImpact": {
+        "simulatedCacheDelay_ms": 91.29999995231628, // 캐시 데이터에 의해 지연된 시간 (ms)
+                                                    // Time delayed due to cache data (ms)
+        "simulatedCacheSize_MB": 1,                  // 캐시 데이터 크기 (MB)
+                                                    // Cache data size (MB)
+        "simulatedDelay_ms": 500,                    // 설정된 인위적인 지연 시간 (ms)
+                                                    // Configured artificial delay time (ms)
+        "totalDelay_ms": 591.2999999523163           // 총 지연 시간 (ms)
+                                                    // Total delay time (ms)
+    }, 
     "clickCount": 1,
     "job": [
         {
@@ -309,8 +389,12 @@ const UserDefinedItems: UserDefinedItem[] = [
 }
 ```
 
+<br/>
+<br/>
 
 ### 4. 전역 & 로컬 커스텀 데이터 그룹 설정: Setting Global & Local Custom Data Groups
+
+<br/>
 
 - 전역 커스텀 데이터는 모든 이벤트 유형에 공통적으로 적용되는 데이터를 정의합니다.
 - 로컬 커스텀 데이터는 특정 이벤트 유형에만 적용되는 데이터를 정의합니다.
@@ -322,7 +406,12 @@ const UserDefinedItems: UserDefinedItem[] = [
 - Local custom data defines data that applies only to specific event types.
 - This allows for more detailed tracking and analysis of user interactions.
 
+<br/>
+<br/>
+
 ### 사용법: How To Use
+
+<br/>
 
 #### 전역 커스텀 데이터: Global Custom Data
 
@@ -331,8 +420,9 @@ const UserDefinedItems: UserDefinedItem[] = [
 // 설정한 UserDefinedItems를 사용
 setGlobalUserDefinedItems(UserDefinedItems);
 
-
 ```
+
+<br/>
 
 - 전역 커스텀 데이터는 애플리케이션의 모든 이벤트에서 공통적으로 사용됩니다. setGlobalUserDefinedItems 함수를 사용하여 전역 데이터 항목을 설정할 수 있습니다. 예를 들어, 사용자의 직업, 연령대 등과 같은 일반적인 정보를 전역 데이터로 설정할 수 있습니다.
 
@@ -340,6 +430,7 @@ setGlobalUserDefinedItems(UserDefinedItems);
 
 - Global custom data is used across all events in the application. The setGlobalUserDefinedItems function allows you to set global data items. For example, general information such as a user's job or age group can be set as global data.
 
+<br/>
 
 #### 로컬 커스텀 데이터: Local Custom Data
 
@@ -355,15 +446,20 @@ setLocalCustomDataGroup('clickEventCategoryB', [
 ]);
 ```
 
+<br/>
+
 - 로컬 커스텀 데이터는 특정 이벤트에만 적용됩니다. 예를 들어, 특정 클릭 이벤트에만 적용되는 데이터를 정의할 때 사용합니다. setLocalCustomDataGroup 함수를 통해 각 이벤트 카테고리별로 다른 데이터를 설정할 수 있습니다.
 
 <br/>
 
 - Local custom data applies only to specific events. For example, it's used to define data that applies only to certain click events. The setLocalCustomDataGroup function allows you to set different data for each event category.
 
+<br/>
+<br/>
 
 ### 5. 클릭 이벤트 리스너 설정/ 클릭 이벤트 추적 함수 사용: Setting Click Event Listeners / Using Click Event Tracking Function
 
+<br/>
 
 trackClickEvent 함수와 trackKeywordEvent 함수는 웹페이지나 애플리케이션에서 사용자의 클릭과 키워드 이벤트를 추적하는 데 사용되는 함수들입니다.
 이들은 이러한 상호작용과 관련된 데이터를 수집하고 관리하여, 분석, 사용자 경험 개선 또는 다양한 목적으로 사용할 수 있습니다.
@@ -373,9 +469,11 @@ trackClickEvent 함수와 trackKeywordEvent 함수는 웹페이지나 애플리�
 
 The trackClickEvent and trackKeywordEvent functions are used to track user click and keyword events on web pages or applications. They collect and manage data related to these interactions for analysis, user experience improvement, or various other purposes. Let's take a closer look at the configuration and usage of each function.
 
+<br/>
 
 #### trackClickEvent Function
 
+<br/>
 
 - 매개변수:
 
@@ -435,6 +533,8 @@ The trackClickEvent and trackKeywordEvent functions are used to track user click
 2. Provides flexibility in capturing standard and custom data.
 3. Enables post-processing or handling of this data through a callback.
 
+<br/>
+
 ### 사용법: How To Use
 
 ```javascript
@@ -446,7 +546,12 @@ document.getElementById('elementB').addEventListener('click', (event) => {
 });
 ```
 
+<br/>
+<br/>
+
 ### 예상 결과: Expected Results
+
+<br/>
 
 - elementA 클릭 시
 
@@ -460,6 +565,8 @@ document.getElementById('elementB').addEventListener('click', (event) => {
 1. Local custom data (defined in the clickEventCategoryA group) is included and sent with the click event data.
 2. This data is set to be included (with global custom data set to false) by specifying true as the third parameter in the trackClickEvent function.
 
+<br/>
+
 ```json
 {
     "eventType": "click",
@@ -472,6 +579,8 @@ document.getElementById('elementB').addEventListener('click', (event) => {
 }
 ```
 
+<br/>
+
 - elementB 클릭 시
 
 1. 전역 커스텀 데이터(GlobalUserDefinedItems에 정의된 데이터)가 클릭 이벤트 데이터에 포함되어 전송됩니다.
@@ -483,6 +592,8 @@ document.getElementById('elementB').addEventListener('click', (event) => {
 
 1. Global custom data (defined in GlobalUserDefinedItems) is included and sent with the click event data.
 2. This data is set to be included (with local custom data set to false) by specifying true as the fourth parameter in the trackClickEvent function.
+
+<br/>
 
 ```json
 {
@@ -500,8 +611,12 @@ document.getElementById('elementB').addEventListener('click', (event) => {
 }
 ```
 
+<br/>
+<br/>
 
 ### 6. 키워드 이벤트 추적 함수 사용: Using Keyword Event Tracking Function
+
+<br/>
 
 - 매개변수:
 
@@ -558,6 +673,8 @@ includeLocalCustomData 또는 includeGlobalCustomData가 선택되면 추가 커
 2. Collects detailed data on these events.
 3. Enables post-event processing or tasks through a callback.
 
+<br/>
+<br/>
 
 ### 사용법: How To Use
 
@@ -569,6 +686,9 @@ function simulateKeywordEvent() {
 
 simulateKeywordEvent();
 ```
+
+<br/>
+<br/>
 
 ### 예상 결과: Expected Results
 
@@ -593,8 +713,12 @@ simulateKeywordEvent();
 }
 ```
 
+<br/>
+<br/>
 
 ### 7. 서버 데이터 저장: Saving Data to Server
+
+<br/>
 
 이벤트 추적 함수(trackClickEvent 또는 trackKeywordEvent)에 콜백 함수를 전달하여, 이벤트 데이터를 서버로 전송할 수 있습니다. 
 이 콜백 함수는 이벤트 데이터를 받아 서버 API 엔드포인트로 전송하는 로직을 포함합니다.
@@ -602,6 +726,8 @@ simulateKeywordEvent();
 <br/>
 
 Event tracking functions (trackClickEvent or trackKeywordEvent) can send event data to the server by passing a callback function. This callback function includes logic for sending event data to a server API endpoint.
+
+<br/>
 
 ### 사용법: How To Use
 
@@ -635,6 +761,8 @@ Event tracking functions (trackClickEvent or trackKeywordEvent) can send event d
     }
 
 ```
+<br/>
+<br/>
 
 ### 예상 결과: Expected Results
 
@@ -671,7 +799,12 @@ This process can be used to track user interactions in real-time, store data in 
 
 Since the data is stored in JSON format, it can be easily integrated, visualized, and analyzed with data analysis tools or dashboards. For example, it can be integrated with various platforms such as Google Analytics, Google BigQuery, AWS QuickSight, etc.
 
+<br/>
+<br/>
+
 ### 종합: Summary
+
+<br/>
 
 이러한 방식으로 사용자 이벤트 데이터를 추적하고 관련 데이터를 수집 및 분석할 수 있습니다.
 해당 라이브러리는 웹사이트나 애플리케이션의 사용성 개선, 사용자 경험 최적화 등에 활용될 수 있습니다.

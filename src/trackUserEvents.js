@@ -94,6 +94,57 @@ function getRandomTimestamp() {
     return getRandomDate(chosenInterval[0], chosenInterval[1]);
 }
 exports.getRandomTimestamp = getRandomTimestamp;
+/**
+ *🐺 Ver 1.1.0: 캐시 데이터 설정 예시 🐺
+const userDefinedItem: UserDefinedItem[] = [{
+    name: "example",
+    type: "object",
+    // 사용 예시
+    const cacheSettings: CacheDataSettings = {
+        enableCacheSimulation: true,
+        simulatedCacheSize: 50, // 50MB의 무의미한 텍스트 캐시 데이터
+        simulatedDelay: 500 // 500ms 지연
+    };
+    // 다른 옵션들...
+}];
+*/
+/**🐺 Ver 1.1.0: 캐시 데이터 생성 및 첨가 함수 🐺 */
+function simulateCacheData(cacheSettings) {
+    if (!cacheSettings.enableCacheSimulation) {
+        return { totalDelay: 0, simulatedDelay: 0 };
+    }
+    var startTime = performance.now(); //'캐시 데이터 생성' 이전 시간 측정
+    // 캐시 데이터를 시뮬레이션하기 위한 객체
+    var cacheData = {
+        size: cacheSettings.simulatedCacheSize,
+        delay: cacheSettings.simulatedDelay,
+        content: [] // 캐시 데이터 내용 (문자열 배열로 타입을 명시함.)
+    };
+    // 캐시 데이터 시뮬레이션 로직 (무의미한 텍스트 데이터 반복 생성)
+    // 🐺 1MB text: 1,000,000 chars 🐺
+    var chars = "QUICKBROWNFOXJUMPSOVERTHELAZYDOGquickbrownfoxjumpsoverthelazydog0123456789";
+    var simulatedText = '';
+    for (var i = 0; i < cacheSettings.simulatedCacheSize * 1000000; i++) {
+        simulatedText += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    cacheData.content.push(simulatedText);
+    var endTime = performance.now(); //'캐시 데이터 생성' 이후 시간 측정
+    var simulatedCacheDelay_ms = endTime - startTime;
+    var totalDelay = cacheSettings.simulatedDelay + simulatedCacheDelay_ms;
+    // 인위적인 지연 시간 추가
+    if (cacheSettings.simulatedDelay > 0) {
+        setTimeout(function () {
+            // console.log(`Simulated delay of ${cacheSettings.simulatedDelay}ms`);
+        }, cacheSettings.simulatedDelay);
+    }
+    var result = {
+        simulatedCacheSize_MB: cacheSettings.simulatedCacheSize, //캐시 데이터 크기(MB)
+        simulatedCacheDelay_ms: simulatedCacheDelay_ms, //캐시 데이터에 의해 지연된 시간 (ms)
+        simulatedDelay_ms: cacheSettings.simulatedDelay, //설정된 인위적인 지연 시간 (ms)
+        totalDelay_ms: totalDelay //총 지연 시간 (ms)
+    };
+    return result;
+}
 // 전역 커스텀 데이터들을 관리하기 위한 UserDefinedItem 배열
 exports.GlobalUserDefinedItems = [];
 // 다양한 로컬 커스텀 데이터 그룹들을 관리하기 위한 '객체' 
@@ -126,8 +177,19 @@ function gaussianRandom(mean, standardDeviation) {
 }
 exports.gaussianRandom = gaussianRandom;
 //랜덤 데이터 생성 함수
-function createRandomData(items) {
+function createRandomData(items, isRecursive) {
+    if (isRecursive === void 0) { isRecursive = false; }
     var randomData = {};
+    var cacheImpact; //캐시 데이터 추가 테스트 결과를 저장하기 위한 변수
+    // 재귀 알고리즘으로 중복 호출되지 않았을 때에만 캐시 시뮬레이션을 적용
+    if (!isRecursive) {
+        items.forEach(function (item) {
+            if (item.name && item.type === 'object' && item.cacheSettings && item.cacheSettings.enableCacheSimulation === true && !item.options) {
+                cacheImpact = simulateCacheData(item.cacheSettings);
+                return; // 캐시 데이터 처리 이후 다음 항목으로 넘어감
+            }
+        });
+    }
     items.forEach(function (item) {
         var _a, _b, _c, _d, _e, _f;
         //배열 & 객체의 항목들에 대한 랜덤 처리 여부
@@ -219,7 +281,8 @@ function createRandomData(items) {
                             randomData[item.name] = selectedOptions.map(function (subItem) {
                                 // 배열 내부의 객체 또는 배열을 재귀적으로 처리
                                 if (typeof subItem === 'object' && subItem !== null) {
-                                    return createRandomData([subItem]);
+                                    var result = createRandomData([subItem], true);
+                                    return result.randomData;
                                 }
                                 return subItem;
                             });
@@ -234,7 +297,8 @@ function createRandomData(items) {
                             randomData[item.name] = shuffled.slice(0, selectedCount).map(function (subItem) {
                                 // 배열 내부의 객체 또는 배열인 경우, 재귀적으로 createRandomData 호출
                                 if (typeof subItem === 'object' && subItem !== null) {
-                                    return createRandomData([subItem]);
+                                    var result = createRandomData([subItem], true);
+                                    return result.randomData;
                                 }
                                 return subItem;
                             });
@@ -245,7 +309,8 @@ function createRandomData(items) {
                         randomData[item.name] = item.options.map(function (subItem) {
                             if (typeof subItem === 'object' && subItem !== null) {
                                 // 배열 내부의 객체 또는 배열인 경우, 재귀적으로 createRandomData 호출
-                                return createRandomData([subItem]);
+                                var result = createRandomData([subItem], true);
+                                return result.randomData;
                             }
                             return subItem;
                         });
@@ -257,7 +322,6 @@ function createRandomData(items) {
                 break;
             case 'object':
                 // 객체 처리
-                // 타입 단언 사용, item.options가 Record<string, any>(객체 속성 string, 프로퍼티 any)인지 확인
                 if (typeof item.options === 'object' && item.options !== null && !Array.isArray(item.options)) {
                     var options_1 = item.options;
                     if (randomizeObjects) {
@@ -290,7 +354,8 @@ function createRandomData(items) {
                             if (subItem && typeof subItem === 'object' && 'name' in subItem && 'type' in subItem) {
                                 // subItem이 UserDefinedItem 타입인 경우, 재귀적으로 createRandomData 호출
                                 randomData[item.name] = randomData[item.name] || {};
-                                randomData[item.name][key] = createRandomData([subItem]);
+                                var result = createRandomData([subItem], true);
+                                return result.randomData;
                             }
                             else {
                                 // 기본값으로 설정
@@ -298,6 +363,9 @@ function createRandomData(items) {
                                 randomData[item.name][key] = subItem;
                             }
                         });
+                        if (selectedOptionKeys.length === 0) {
+                            console.error("Invalid object configuration for randomizeObjects in UserDefinedItem: ".concat(item.name));
+                        }
                     }
                     else {
                         // 전체 속성 포함
@@ -306,7 +374,8 @@ function createRandomData(items) {
                             if (subItem && typeof subItem === 'object' && 'name' in subItem && 'type' in subItem) {
                                 // subItem이 UserDefinedItem 타입인 경우, 재귀적으로 createRandomData 호출
                                 randomData[item.name] = randomData[item.name] || {};
-                                randomData[item.name][key] = createRandomData([subItem]);
+                                var result = createRandomData([subItem], true);
+                                return result.randomData;
                             }
                             else {
                                 // 기본값으로 설정
@@ -314,15 +383,15 @@ function createRandomData(items) {
                                 randomData[item.name][key] = subItem;
                             }
                         });
+                        if (Object.keys(options_1).length === 0) {
+                            console.error("Invalid object configuration for non-randomized objects in UserDefinedItem: ".concat(item.name));
+                        }
                     }
-                }
-                else {
-                    console.error("Invalid format for 'object' type in UserDefinedItem: ".concat(item.name));
                 }
                 break;
         }
     });
-    return randomData;
+    return { randomData: randomData, cacheImpact: cacheImpact };
 }
 exports.createRandomData = createRandomData;
 /** 확률 설정 함수: 배열, 객체의 각 항목에 확률을 설정 / 확률 설정하지 않은 나머지 항목들 중 최소 하나가 선택될 확률을 100%로 설정 */
@@ -397,22 +466,25 @@ function trackClickEvent(event, eventType, includeLocalCustomData, includeGlobal
     // eventData객체를 저장하기 위한 객체
     var allEventData = {};
     for (var i = 0; i < exports.userDefinedClickCount; i++) { //설정한 클릭 횟수만큼 이벤트 데이터 객체 생성
-        var localCustomDataList = getLocalCustomDataGroup(eventType);
         var eventData = {
             eventType: event.type,
             timestamp: getRandomTimestamp(),
             clickCount: i + 1, //각 이벤트에 대한 고유한 클릭 카운트 부여
         };
         // localCustomData를 조건부로 추가 (특정 요소에서 추출하고자 하는 커스텀 클릭 이벤트 데이터 그룹)
-        if (includeLocalCustomData && localCustomDataList.length > 0) {
-            var localCustomData = createRandomData(localCustomDataList);
-            Object.assign(eventData, localCustomData);
+        if (includeLocalCustomData) {
+            var localCustomDataList = getLocalCustomDataGroup(eventType);
+            var _a = createRandomData(localCustomDataList), randomData = _a.randomData, cacheImpact = _a.cacheImpact;
+            Object.assign(eventData, randomData);
+            if (cacheImpact)
+                eventData.cacheImpact = cacheImpact;
         }
         // includeGlobalCustomData를 조건부로 추가 (프로젝트 전역에서 추출하고자 하는 커스텀 클릭 이벤트 데이터)
         if (includeGlobalCustomData) {
-            //customData 생성
-            var globalCustomData = createRandomData(exports.GlobalUserDefinedItems);
-            Object.assign(eventData, globalCustomData);
+            var _b = createRandomData(exports.GlobalUserDefinedItems), randomData = _b.randomData, cacheImpact = _b.cacheImpact;
+            Object.assign(eventData, randomData);
+            if (cacheImpact)
+                eventData.cacheImpact = cacheImpact;
         }
         var eventId = "".concat(event.type, "_").concat(i + 1); // 고유 식별자 생성
         allEventData[eventId] = eventData; // 객체에 생성된 eventData 저장
@@ -432,7 +504,6 @@ function trackKeywordEvent(keyword, eventType, includeLocalCustomData, includeGl
     // eventData객체를 저장하기 위한 객체
     var allEventData = {};
     for (var i = 0; i < exports.userDefinedKeywordCount; i++) { //설정한 키워드 입력 횟수만큼 이벤트 데이터 객체 생성
-        var localCustomDataList = getLocalCustomDataGroup(eventType);
         var eventData = {
             keyword: keyword,
             eventType: eventType,
@@ -441,15 +512,19 @@ function trackKeywordEvent(keyword, eventType, includeLocalCustomData, includeGl
             repeatCount: repeatCount,
         };
         // localCustomData를 조건부로 추가 (특정 요소에서 추출하고자 하는 커스텀 클릭 이벤트 데이터 그룹)
-        if (includeLocalCustomData && localCustomDataList.length > 0) {
-            var localCustomData = createRandomData(localCustomDataList);
-            Object.assign(eventData, localCustomData);
+        if (includeLocalCustomData) {
+            var localCustomDataList = getLocalCustomDataGroup(eventType);
+            var _a = createRandomData(localCustomDataList), randomData = _a.randomData, cacheImpact = _a.cacheImpact;
+            if (cacheImpact)
+                eventData.cacheImpact = cacheImpact;
+            Object.assign(eventData, randomData);
         }
         // includeGlobalCustomData를 조건부로 추가 (프로젝트 전역에서 추출하고자 하는 커스텀 클릭 이벤트 데이터)
         if (includeGlobalCustomData) {
-            //customData 생성
-            var globalCustomData = createRandomData(exports.GlobalUserDefinedItems);
-            Object.assign(eventData, globalCustomData);
+            var _b = createRandomData(exports.GlobalUserDefinedItems), randomData = _b.randomData, cacheImpact = _b.cacheImpact;
+            Object.assign(eventData, randomData);
+            if (cacheImpact)
+                eventData.cacheImpact = cacheImpact;
         }
         var eventId = "".concat(eventType, "_").concat(i + 1); // 고유 식별자 생성
         allEventData[eventId] = eventData; // 객체에 eventData 저장
@@ -487,3 +562,99 @@ function setUserKeywordCount(KeywordEventCount) {
     }
 }
 exports.setUserKeywordCount = setUserKeywordCount;
+/**
+ * 배열, 객체에서의 재귀 알고리즘 활용 방안
+ * (주의: name, type, options 정의 및 설계를 정확히 하십시오.)
+
+예시: 복합적인 유저 데이터
+
+    const GlobalUserDefinedItems: UserDefinedItem[] = [
+        {
+            name: 'job',
+            type: 'array',
+            options:[
+                        {
+                            name: 'student',
+                            type: 'array',
+                            options: [
+                                {
+                                    name: 'age',
+                                    type: 'number',
+                                    options: [10, 30]
+                                },
+                                {
+                                    name: 'salary',
+                                    type: 'number',
+                                    options: [8000, 20000]
+                                }
+                            ]
+                        },
+                        {
+                            name: 'developer',
+                            type: 'array',
+                            options: [
+                                {
+                                    name: 'age',
+                                    type: 'number',
+                                    options: [20, 60]
+                                },
+                                {
+                                    name: 'salary',
+                                    type: 'number',
+                                    distribution: 'normal',
+                                    mean: 50000,
+                                    options: [40000, 100000]
+                                }
+                            ]
+                        },
+                        {
+                            name: 'accountant',
+                            type: 'array',
+                            options: [
+                                {
+                                    name: 'age',
+                                    type: 'number',
+                                    options: [20, 60]
+                                },
+                                {
+                                    name: 'salary',
+                                    type: 'number',
+                                    distribution: 'normal',
+                                    mean: 50000,
+                                    options: [40000, 100000]
+                                }
+                            ]
+                        }
+                    ],
+            randomizeArrays: true,
+            selectionProbability: true,
+            probabilitySettings: [
+                { identifier: 1, probability: 45 }, //(45% 확률로 developer 선택)
+                { identifier: 2, probability: 45 }, //(45% 확률로 accountant 선택)
+            ],
+        },
+        {
+            name: 'favorite drinks',
+            type: 'array',
+            options: ['Americano', 'Latte', 'Cappuccino', 'Green Tea Latte'],
+            randomizeArrays: true
+        },
+        {
+            name: 'hobbies',
+            type: 'object',
+            options: { hobby1: 'reading', hobby2: 'gaming', hobby3: 'coding', hobby4: 'hiking' },
+            randomizeObjects: true,
+            objectSelectionCount: 3,
+            randomizeSelectionCount: true
+        },
+        {
+            name: 'cache-data',
+            type: 'object',
+            cacheSettings: {
+                enableCacheSimulation: true,
+                simulatedCacheSize: 1, // 1MB의 무의미한 텍스트 캐시 데이터
+                simulatedDelay: 500 // 500ms 지연
+            }
+        }
+    ];
+*/

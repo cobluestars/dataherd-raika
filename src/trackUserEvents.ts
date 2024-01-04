@@ -131,6 +131,9 @@ export type UserDefinedItem = {
     arraySelectionCount?: number; //배열에서 선택할 항목 수 (디폴트: 1)
     objectSelectionCount?: number; //객체에서 선택할 항목 수 (디폴트: 1)
     randomizeSelectionCount?: boolean; //선택한 항목 수 내에서 무작위 선택 여부
+
+    /**🐺 Ver 1.1.0: 캐시 데이터 설정을 위한 타입 🐺*/
+    cacheSettings?: CacheDataSettings; // 캐시 데이터 설정
 };
 
 //확률 설정을 위한 타입
@@ -138,6 +141,75 @@ export type ProbabilitySetting = {
     identifier: number | string;    //배열/객체의 인덱스 혹은 항목명으로 확률 부여할 대상을 정함.
     probability: number;    //확률 부여 (0~100)
 }
+
+/**🐺 Ver 1.1.0: 캐시 데이터 시뮬레이션 설정을 위한 타입 🐺*/
+export type CacheDataSettings = {
+    enableCacheSimulation: boolean; // 캐시 데이터 시뮬레이션 활성화 여부
+    simulatedCacheSize: number; // 시뮬레이션 캐시 데이터의 크기 (예: MB 단위)
+    simulatedDelay: number; // 데이터 처리 시 인위적인 지연 시간 (예: 밀리초 단위)
+};
+
+/** 
+ *🐺 Ver 1.1.0: 캐시 데이터 설정 예시 🐺
+const userDefinedItem: UserDefinedItem[] = [{
+    name: "example",
+    type: "object",
+    // 사용 예시
+    const cacheSettings: CacheDataSettings = {
+        enableCacheSimulation: true,
+        simulatedCacheSize: 50, // 50MB의 무의미한 텍스트 캐시 데이터
+        simulatedDelay: 500 // 500ms 지연
+    };
+    // 다른 옵션들...
+}];
+*/
+
+/**🐺 Ver 1.1.0: 캐시 데이터 생성 및 첨가 함수 🐺 */
+function simulateCacheData(cacheSettings: CacheDataSettings) {
+    if (!cacheSettings.enableCacheSimulation) {
+        return { totalDelay: 0, simulatedDelay: 0 };
+    }
+
+    const startTime = performance.now(); //'캐시 데이터 생성' 이전 시간 측정
+
+    // 캐시 데이터를 시뮬레이션하기 위한 객체
+    let cacheData = {
+        size: cacheSettings.simulatedCacheSize,
+        delay: cacheSettings.simulatedDelay,
+        content: [] as string[]  // 캐시 데이터 내용 (문자열 배열로 타입을 명시함.)
+    };
+
+    // 캐시 데이터 시뮬레이션 로직 (무의미한 텍스트 데이터 반복 생성)
+    // 🐺 1MB text: 1,000,000 chars 🐺
+    const chars = "QUICKBROWNFOXJUMPSOVERTHELAZYDOGquickbrownfoxjumpsoverthelazydog0123456789";
+    let simulatedText = '';
+    for (let i = 0; i < cacheSettings.simulatedCacheSize * 1000000; i++) {
+        simulatedText += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    cacheData.content.push(simulatedText);
+
+    const endTime = performance.now(); //'캐시 데이터 생성' 이후 시간 측정
+
+    let simulatedCacheDelay_ms = endTime - startTime
+    let totalDelay = cacheSettings.simulatedDelay + simulatedCacheDelay_ms;
+
+    // 인위적인 지연 시간 추가
+    if (cacheSettings.simulatedDelay > 0) {
+        setTimeout(() => {
+            // console.log(`Simulated delay of ${cacheSettings.simulatedDelay}ms`);
+        }, cacheSettings.simulatedDelay);
+    }
+
+    const result = { 
+        simulatedCacheSize_MB: cacheSettings.simulatedCacheSize, //캐시 데이터 크기(MB)
+        simulatedCacheDelay_ms, //캐시 데이터에 의해 지연된 시간 (ms)
+        simulatedDelay_ms: cacheSettings.simulatedDelay, //설정된 인위적인 지연 시간 (ms)
+        totalDelay_ms: totalDelay //총 지연 시간 (ms)
+    };
+
+    return result;
+}
+
 
 // 전역 커스텀 데이터들을 관리하기 위한 UserDefinedItem 배열
 export let GlobalUserDefinedItems: UserDefinedItem[] = [];
@@ -175,8 +247,19 @@ export function gaussianRandom(mean: number, standardDeviation: number): number 
 }
 
 //랜덤 데이터 생성 함수
-export function createRandomData(items: UserDefinedItem[]): Record<string, any> {
+export function createRandomData(items: UserDefinedItem[], isRecursive: boolean = false): { randomData: Record<string, any>, cacheImpact?: any }  {
     let randomData: Record<string, any> = {};
+    let cacheImpact //캐시 데이터 추가 테스트 결과를 저장하기 위한 변수
+
+   // 재귀 알고리즘으로 중복 호출되지 않았을 때에만 캐시 시뮬레이션을 적용
+   if (!isRecursive) {
+        items.forEach(item => {
+            if ( item.name && item.type === 'object' && item.cacheSettings && item.cacheSettings.enableCacheSimulation === true && !item.options) {
+                cacheImpact = simulateCacheData(item.cacheSettings);
+                return; // 캐시 데이터 처리 이후 다음 항목으로 넘어감
+            }
+        });
+    }
 
     items.forEach(item => {
         //배열 & 객체의 항목들에 대한 랜덤 처리 여부
@@ -270,7 +353,8 @@ export function createRandomData(items: UserDefinedItem[]): Record<string, any> 
                             randomData[item.name] = selectedOptions.map(subItem => {
                                 // 배열 내부의 객체 또는 배열을 재귀적으로 처리
                                 if (typeof subItem === 'object' && subItem !== null) {
-                                    return createRandomData([subItem as UserDefinedItem]);
+                                    const result = createRandomData([subItem as UserDefinedItem], true);
+                                    return result.randomData;
                                 }
                                 return subItem;
                             });
@@ -284,7 +368,8 @@ export function createRandomData(items: UserDefinedItem[]): Record<string, any> 
                             randomData[item.name] = shuffled.slice(0, selectedCount).map(subItem => {
                                 // 배열 내부의 객체 또는 배열인 경우, 재귀적으로 createRandomData 호출
                                 if (typeof subItem === 'object' && subItem !== null) {
-                                    return createRandomData([subItem]);
+                                    const result = createRandomData([subItem as UserDefinedItem], true);
+                                    return result.randomData;
                                 }
                                 return subItem;
                             });
@@ -294,7 +379,8 @@ export function createRandomData(items: UserDefinedItem[]): Record<string, any> 
                         randomData[item.name] = item.options.map(subItem => {
                             if (typeof subItem === 'object' && subItem !== null) {
                                 // 배열 내부의 객체 또는 배열인 경우, 재귀적으로 createRandomData 호출
-                                return createRandomData([subItem]);
+                                const result = createRandomData([subItem as UserDefinedItem], true);
+                                return result.randomData;
                             }
                             return subItem;
                         });
@@ -305,10 +391,9 @@ export function createRandomData(items: UserDefinedItem[]): Record<string, any> 
                 break;
             case 'object':
             // 객체 처리
-                // 타입 단언 사용, item.options가 Record<string, any>(객체 속성 string, 프로퍼티 any)인지 확인
                 if (typeof item.options === 'object' && item.options !== null && !Array.isArray(item.options)) {
+
                     const options = item.options as Record<string, any>;
-            
                     if (randomizeObjects) {
                         // 객체 속성의 랜덤 선택 처리
                         let selectedOptionKeys: string[] = [];
@@ -318,7 +403,7 @@ export function createRandomData(items: UserDefinedItem[]): Record<string, any> 
                             const keys = Object.keys(options);
                             const probabilities = settingProbabilities(keys, item.probabilitySetting || [], true);
                             selectedOptionKeys = applyProbabilityBasedSelection(keys, probabilities) as string[];
-  
+
                             // 선택된 속성 수가 objectSelectionCount를 초과하지 않도록 조정
                             selectedOptionKeys = selectedOptionKeys.slice(0, objectSelectionCount);
             
@@ -342,35 +427,43 @@ export function createRandomData(items: UserDefinedItem[]): Record<string, any> 
                             if (subItem && typeof subItem === 'object' && 'name' in subItem && 'type' in subItem) {
                                 // subItem이 UserDefinedItem 타입인 경우, 재귀적으로 createRandomData 호출
                                 randomData[item.name] = randomData[item.name] || {};
-                                randomData[item.name][key] = createRandomData([subItem]);
+                                const result = createRandomData([subItem as UserDefinedItem], true);
+                                return result.randomData;
                             } else {
                                 // 기본값으로 설정
                                 randomData[item.name] = randomData[item.name] || {};
                                 randomData[item.name][key] = subItem;
                             }
                         });
+
+                        if (selectedOptionKeys.length === 0) {
+                            console.error(`Invalid object configuration for randomizeObjects in UserDefinedItem: ${item.name}`);
+                        }
                     } else {
                         // 전체 속성 포함
                         Object.keys(options).forEach(key => {
-                            const subItem = options[key];  
-                            if (subItem && typeof subItem === 'object' && 'name' in subItem && 'type' in subItem) {
-                                // subItem이 UserDefinedItem 타입인 경우, 재귀적으로 createRandomData 호출
-                                randomData[item.name] = randomData[item.name] || {};
-                                randomData[item.name][key] = createRandomData([subItem]);
-                            } else {
-                                // 기본값으로 설정
-                                randomData[item.name] = randomData[item.name] || {};
-                                randomData[item.name][key] = subItem;
-                            }
-                        });
+                        const subItem = options[key];  
+                        if (subItem && typeof subItem === 'object' && 'name' in subItem && 'type' in subItem) {
+                            // subItem이 UserDefinedItem 타입인 경우, 재귀적으로 createRandomData 호출
+                            randomData[item.name] = randomData[item.name] || {};
+                            const result = createRandomData([subItem as UserDefinedItem], true);
+                            return result.randomData;
+                        } else {
+                            // 기본값으로 설정
+                            randomData[item.name] = randomData[item.name] || {};
+                            randomData[item.name][key] = subItem;
+                        }
+                    });
+
+                    if (Object.keys(options).length === 0) {
+                        console.error(`Invalid object configuration for non-randomized objects in UserDefinedItem: ${item.name}`);
                     }
-                } else {
-                    console.error(`Invalid format for 'object' type in UserDefinedItem: ${item.name}`);
-                }
-                break;
+                }  
+            }
+            break;
         }
     });
-    return randomData;
+    return { randomData, cacheImpact };
 }
 
 /** 확률 설정 함수: 배열, 객체의 각 항목에 확률을 설정 / 확률 설정하지 않은 나머지 항목들 중 최소 하나가 선택될 확률을 100%로 설정 */
@@ -450,6 +543,139 @@ function applyProbabilityBasedSelection(
 
     return selectedOptions;
 }
+
+
+//클릭 이벤트 관련 콜백 함수의 타입 정의
+export type ClickEventDataCallback = (eventData: { [key: string]: ClickEventData }) => void;
+
+//사용자 클릭 이벤트 리스너 추적 함수 Click Event Listener
+export function trackClickEvent(
+    event: Event,
+    eventType: string,
+    includeLocalCustomData: boolean = false, 
+    includeGlobalCustomData: boolean = false,
+    callback?: ClickEventDataCallback
+    ): void {
+    
+        // eventData객체를 저장하기 위한 객체
+        let allEventData: {[key: string]: ClickEventData} = {};
+        
+        for (let i = 0; i < userDefinedClickCount; i++) {   //설정한 클릭 횟수만큼 이벤트 데이터 객체 생성
+           
+            let eventData: ClickEventData = {
+                eventType: event.type,
+                timestamp: getRandomTimestamp(),
+                clickCount: i + 1,  //각 이벤트에 대한 고유한 클릭 카운트 부여
+            };
+
+            // localCustomData를 조건부로 추가 (특정 요소에서 추출하고자 하는 커스텀 클릭 이벤트 데이터 그룹)
+            if (includeLocalCustomData) {
+                const localCustomDataList = getLocalCustomDataGroup(eventType);
+                const { randomData, cacheImpact } = createRandomData(localCustomDataList)
+                Object.assign(eventData, randomData);
+                if (cacheImpact)
+                eventData.cacheImpact = cacheImpact;
+            }
+
+            // includeGlobalCustomData를 조건부로 추가 (프로젝트 전역에서 추출하고자 하는 커스텀 클릭 이벤트 데이터)
+            if (includeGlobalCustomData) {
+                const { randomData, cacheImpact } = createRandomData(GlobalUserDefinedItems);
+                Object.assign(eventData, randomData);
+                if (cacheImpact)
+                eventData.cacheImpact = cacheImpact;
+            }
+
+            const eventId = `${event.type}_${i + 1}`;  // 고유 식별자 생성
+            allEventData[eventId] = eventData;  // 객체에 생성된 eventData 저장
+    }
+    
+    // 콜백 함수 호출
+    if (callback) {
+        callback(allEventData);
+    }
+
+    console.log('Click Event Data:', allEventData);
+}
+
+//키워드 이벤트 관련 콜백 함수의 타입 정의
+export type KeywordEventDataCallback = (eventData: { [key: string]: KeywordEventData }) => void;
+
+//사용자 입력 키워드 이벤트 추적 함수 Keyword Event
+export function trackKeywordEvent(
+    keyword: string, 
+    eventType: string, 
+    includeLocalCustomData: boolean = false,  
+    includeGlobalCustomData: boolean = false,
+    repeatCount: number = 1, 
+    callback?: KeywordEventDataCallback
+    ): void {
+    
+        // eventData객체를 저장하기 위한 객체
+        let allEventData: {[key: string]: KeywordEventData} = {};
+        
+        for (let i = 0; i < userDefinedKeywordCount; i++) {   //설정한 키워드 입력 횟수만큼 이벤트 데이터 객체 생성
+            let eventData: KeywordEventData = {
+                keyword: keyword,
+                eventType: eventType,
+                timestamp: getRandomTimestamp(),
+                keywordCount: i + 1,  //각 이벤트에 대한 고유한 키워드 카운트 부여
+                repeatCount: repeatCount,
+            };
+
+            // localCustomData를 조건부로 추가 (특정 요소에서 추출하고자 하는 커스텀 클릭 이벤트 데이터 그룹)
+            if (includeLocalCustomData) {
+                const localCustomDataList = getLocalCustomDataGroup(eventType)
+                const { randomData, cacheImpact } = createRandomData(localCustomDataList)
+                if (cacheImpact)
+                eventData.cacheImpact = cacheImpact;
+                Object.assign(eventData, randomData);
+            }
+
+            // includeGlobalCustomData를 조건부로 추가 (프로젝트 전역에서 추출하고자 하는 커스텀 클릭 이벤트 데이터)
+            if (includeGlobalCustomData) {
+                const { randomData, cacheImpact } = createRandomData(GlobalUserDefinedItems);
+                Object.assign(eventData, randomData);
+                if (cacheImpact)
+                    eventData.cacheImpact = cacheImpact;
+            }
+
+            const eventId = `${eventType}_${i + 1}`;  // 고유 식별자 생성
+            allEventData[eventId] = eventData;  // 객체에 eventData 저장
+        }
+
+    // 콜백 함수 호출
+    if (callback) {
+        callback(allEventData);
+    }
+
+    console.log('Keyword Event Data:', allEventData);    
+}
+
+
+/**클릭 횟수를 사용자가 직접 조정할 수 있는 함수:
+ * (1 ~ (2^53 - 1)사이의 숫자 입력 가능)
+ * setUserClickCount(100): 클릭 횟수 100회로 설정*/
+export function setUserClickCount(ClickEventCount: number): void {
+    if(ClickEventCount >= 1 && ClickEventCount <= Number.MAX_SAFE_INTEGER) {
+        userDefinedClickCount = ClickEventCount;
+    } else {
+        console.error(`Invalid Click Count. Please enter a number between 1 and ${Number.MAX_SAFE_INTEGER}. Default value 1 will be set.`);
+        userDefinedClickCount = 1; // Set a default value 1
+    }
+}
+
+/**특정 키워드 생성 & 검색 횟수를 사용자가 직접 조정할 수 있는 함수:
+ * * (1 ~ (2^53 - 1)사이의 숫자 입력 가능)
+ * setUserKeywordCount(100): 키워드 생성 & 검색 횟수 100회로 설정*/
+export function setUserKeywordCount(KeywordEventCount: number): void {
+    if(KeywordEventCount >= 1 && KeywordEventCount <= Number.MAX_SAFE_INTEGER) {
+        userDefinedKeywordCount = KeywordEventCount;
+    } else {
+        console.error(`Invalid Keyword Count. Please enter a number between 1 and ${Number.MAX_SAFE_INTEGER}. Default value 1 will be set.`);
+        userDefinedKeywordCount = 1; // Set a default value 1
+    }
+}
+
  
 /**
  * 배열, 객체에서의 재귀 알고리즘 활용 방안 
@@ -535,133 +761,15 @@ function applyProbabilityBasedSelection(
             randomizeObjects: true,
             objectSelectionCount: 3,
             randomizeSelectionCount: true   
+        },
+        {
+            name: 'cache-data',
+            type: 'object',
+            cacheSettings: {
+                enableCacheSimulation: true,
+                simulatedCacheSize: 1, // 1MB의 무의미한 텍스트 캐시 데이터
+                simulatedDelay: 500 // 500ms 지연
+            }
         }
     ];
 */
-
-
-//클릭 이벤트 관련 콜백 함수의 타입 정의
-export type ClickEventDataCallback = (eventData: { [key: string]: ClickEventData }) => void;
-
-//사용자 클릭 이벤트 리스너 추적 함수 Click Event Listener
-export function trackClickEvent(
-    event: Event,
-    eventType: string,
-    includeLocalCustomData: boolean = false, 
-    includeGlobalCustomData: boolean = false, 
-    callback?: ClickEventDataCallback
-    ): void {
-    
-    // eventData객체를 저장하기 위한 객체
-    let allEventData: {[key: string]: ClickEventData} = {};
-    
-    for (let i = 0; i < userDefinedClickCount; i++) {   //설정한 클릭 횟수만큼 이벤트 데이터 객체 생성
-        const localCustomDataList = getLocalCustomDataGroup(eventType);
-
-        const eventData: ClickEventData = {
-            eventType: event.type,
-            timestamp: getRandomTimestamp(),
-            clickCount: i + 1,  //각 이벤트에 대한 고유한 클릭 카운트 부여
-        };
-
-        // localCustomData를 조건부로 추가 (특정 요소에서 추출하고자 하는 커스텀 클릭 이벤트 데이터 그룹)
-        if (includeLocalCustomData && localCustomDataList.length > 0) {
-            const localCustomData = createRandomData(localCustomDataList)
-            Object.assign(eventData, localCustomData);
-        }
-
-        // includeGlobalCustomData를 조건부로 추가 (프로젝트 전역에서 추출하고자 하는 커스텀 클릭 이벤트 데이터)
-        if (includeGlobalCustomData) {
-            //customData 생성
-            const globalCustomData = createRandomData(GlobalUserDefinedItems);
-            Object.assign(eventData, globalCustomData);
-        }
-
-        const eventId = `${event.type}_${i + 1}`;  // 고유 식별자 생성
-        allEventData[eventId] = eventData;  // 객체에 생성된 eventData 저장
-    }
-    
-    // 콜백 함수 호출
-    if (callback) {
-        callback(allEventData);
-    }
-
-    console.log('Click Event Data:', allEventData);
-}
-
-//키워드 이벤트 관련 콜백 함수의 타입 정의
-export type KeywordEventDataCallback = (eventData: { [key: string]: KeywordEventData }) => void;
-
-//사용자 입력 키워드 이벤트 추적 함수 Keyword Event
-export function trackKeywordEvent(
-    keyword: string, 
-    eventType: string, 
-    includeLocalCustomData: boolean = false,  
-    includeGlobalCustomData: boolean = false,
-    repeatCount: number = 1, 
-    callback?: KeywordEventDataCallback
-    ): void {
-    
-    // eventData객체를 저장하기 위한 객체
-    let allEventData: {[key: string]: KeywordEventData} = {};
-    
-    for (let i = 0; i < userDefinedKeywordCount; i++) {   //설정한 키워드 입력 횟수만큼 이벤트 데이터 객체 생성
-        const localCustomDataList = getLocalCustomDataGroup(eventType);
-
-        const eventData: KeywordEventData = {
-            keyword: keyword,
-            eventType: eventType,
-            timestamp: getRandomTimestamp(),
-            keywordCount: i + 1,  //각 이벤트에 대한 고유한 키워드 카운트 부여
-            repeatCount: repeatCount,
-        };
-
-        // localCustomData를 조건부로 추가 (특정 요소에서 추출하고자 하는 커스텀 클릭 이벤트 데이터 그룹)
-        if (includeLocalCustomData && localCustomDataList.length > 0) {
-            const localCustomData = createRandomData(localCustomDataList)
-            Object.assign(eventData, localCustomData);
-        }
-
-        // includeGlobalCustomData를 조건부로 추가 (프로젝트 전역에서 추출하고자 하는 커스텀 클릭 이벤트 데이터)
-        if (includeGlobalCustomData) {
-            //customData 생성
-            const globalCustomData = createRandomData(GlobalUserDefinedItems);
-            Object.assign(eventData, globalCustomData);
-        }
-
-        const eventId = `${eventType}_${i + 1}`;  // 고유 식별자 생성
-        allEventData[eventId] = eventData;  // 객체에 eventData 저장
-    }
-
-    // 콜백 함수 호출
-    if (callback) {
-        callback(allEventData);
-    }
-
-    console.log('Keyword Event Data:', allEventData);    
-}
-
-
-/**클릭 횟수를 사용자가 직접 조정할 수 있는 함수:
- * (1 ~ (2^53 - 1)사이의 숫자 입력 가능)
- * setUserClickCount(100): 클릭 횟수 100회로 설정*/
-export function setUserClickCount(ClickEventCount: number): void {
-    if(ClickEventCount >= 1 && ClickEventCount <= Number.MAX_SAFE_INTEGER) {
-        userDefinedClickCount = ClickEventCount;
-    } else {
-        console.error(`Invalid Click Count. Please enter a number between 1 and ${Number.MAX_SAFE_INTEGER}. Default value 1 will be set.`);
-        userDefinedClickCount = 1; // Set a default value 1
-    }
-}
-
-/**특정 키워드 생성 & 검색 횟수를 사용자가 직접 조정할 수 있는 함수:
- * * (1 ~ (2^53 - 1)사이의 숫자 입력 가능)
- * setUserKeywordCount(100): 키워드 생성 & 검색 횟수 100회로 설정*/
-export function setUserKeywordCount(KeywordEventCount: number): void {
-    if(KeywordEventCount >= 1 && KeywordEventCount <= Number.MAX_SAFE_INTEGER) {
-        userDefinedKeywordCount = KeywordEventCount;
-    } else {
-        console.error(`Invalid Keyword Count. Please enter a number between 1 and ${Number.MAX_SAFE_INTEGER}. Default value 1 will be set.`);
-        userDefinedKeywordCount = 1; // Set a default value 1
-    }
-}
