@@ -30,10 +30,20 @@
 
 ```typescript
 
-export type TimestampSettings = {
+type TimestampSettings = {
     startTime: string;
     endTime: string;
     peakTimes?: string[][];
+};
+
+// TimestampSettings 객체 초기화
+const timestampSettings: TimestampSettings = {
+    startTime: '2024-01-01T00:00:00',
+    endTime: '2024-01-01T08:00:00',
+    peakTimes: [
+        ['2024-01-01T04:00:00', '2024-01-01T06:00:00'],
+        ['2024-01-01T07:00:00', '2024-01-01T08:00:00']
+    ]
 };
 
 ```
@@ -43,11 +53,15 @@ export type TimestampSettings = {
 
 - peakTimes는 특정 시간대에 타임스탬프 생성 확률을 높이기 위한 설정입니다. 각 피크 타임은 시작 및 종료 시간의 문자열 배열로 정의됩니다.
 
+- 위 예시에서는 2024년 1월 1일 자정부터 오전 8시 사이에 타임스탬프를 생성하도록 설정하며, 오전 4시부터 6시, 그리고 7시부터 8시 사이에 타임스탬프 생성 확률이 높아지도록 피크 타임을 설정합니다.
+
 <br/>
 
 - startTime and endTime define the start and end times for generating event timestamps.
 
 - peakTimes is an optional setting to increase the probability of generating timestamps during specific time intervals. Each peak time interval is defined by an array of start and end time strings.
+
+- In the example above, the timestamp will be generated between midnight and 8 AM on January 1, 2024, with increased probability of generating timestamps between 4 AM to 6 AM and 7 AM to 8 AM.
 
 <br/>
 
@@ -57,30 +71,27 @@ export type TimestampSettings = {
 
 ```javascript
 
-initializeTimestampSettings({
-    startTime: '2024-01-01T00:00:00',
-    endTime: '2024-01-01T08:00:00',
-    peakTimes: [['2024-01-01T04:00:00', '2024-01-01T06:00:00'], ['2024-01-01T07:00:00', '2024-01-01T08:00:00']]
-});
+import { initializeTimestampSettings } from 'dataherd-raika';
+
+// 시간 설정 초기화 함수 호출
+initializeTimestampSettings(timestampSettings);
 
 ```
 <br/>
 
 - 이 함수는 TimestampSettings 객체를 사용하여 타임스탬프 생성에 필요한 시간 설정을 초기화합니다.
 
-- 위 예시에서는 2024년 1월 1일 자정부터 오전 8시 사이에 타임스탬프를 생성하도록 설정하며, 오전 4시부터 6시, 그리고 7시부터 8시 사이에 타임스탬프 생성 확률이 높아지도록 피크 타임을 설정합니다.
-
 <br/>
 
 - This function initializes the timestamp creation settings using the TimestampSettings object.
-
-- In the example above, the timestamp will be generated between midnight and 8 AM on January 1, 2024, with increased probability of generating timestamps between 4 AM to 6 AM and 7 AM to 8 AM.
 
 <br/>
 
 #### 랜덤 타임스탬프 생성 함수: Generating a Random Timestamp
 
 ```javascript
+
+import { getRandomTimestamp } from 'dataherd-raika';
 
 const timestamp = getRandomTimestamp();
 
@@ -128,8 +139,12 @@ const timestamp = getRandomTimestamp();
 ### 2. 클릭 이벤트 & 특정 키워드 이벤트 횟수 조정: Adjusting Click Event & Specific Keyword Event Counts
 
 ```javascript
+
+import { setUserClickCount,setUserKeywordCount } from 'dataherd-raika';
+
 setUserClickCount(25);
 setUserKeywordCount(25);
+
 ```
 
 <br/>
@@ -146,8 +161,9 @@ setUserKeywordCount(25);
 ### 3. 커스텀 데이터 설정: Setting Custom Data
 
 ```typescript
+
 //커스텀 데이터 항목 타입, Custom data type
-export type UserDefinedItem = {
+type UserDefinedItem = {
     
     name: string; // 항목명: 데이터 항목 이름을 정합니다.
                   // Item Name: Set the name of the data item.
@@ -202,7 +218,7 @@ export type UserDefinedItem = {
 
 // 확률 설정을 위한 타입
 // Type for Probability Setting
-export type ProbabilitySetting = {
+type ProbabilitySetting = {
     identifier: number | string;    //배열/객체의 인덱스 혹은 항목명으로 확률 부여할 대상을 정함.
                                     // Identifies the target for probability assignment by array/object index or item name.
     probability: number;    //확률 부여 (0~100)
@@ -212,7 +228,7 @@ export type ProbabilitySetting = {
 /**🐺 Ver 1.1.0: 캐시 데이터 시뮬레이션 설정을 위한 타입
  *               Type for Cache Data Simulation Settings 🐺*/
 
-export type CacheDataSettings = {
+type CacheDataSettings = {
     enableCacheSimulation: boolean; // 캐시 데이터 시뮬레이션 활성화 여부
                                     // Whether to enable cache data simulation
     simulatedCacheSize: number;     // 시뮬레이션 캐시 데이터의 크기 (예: MB 단위)
@@ -235,6 +251,9 @@ export type CacheDataSettings = {
 <br/>
 
 ```typescript
+
+import { UserDefinedItem } from 'dataherd-raika';
+
 const UserDefinedItems: UserDefinedItem[] = [
     // 전역 커스텀 데이터 항목들
     { name: 'age', type: 'number', options: [10, 50], distribution: 'uniform'},
@@ -246,6 +265,9 @@ const UserDefinedItems: UserDefinedItem[] = [
 ```
 
 ```typescript
+
+import { UserDefinedItem } from 'dataherd-raika';
+
 const UserDefinedItems: UserDefinedItem[] = [
     {
         name: 'job',
@@ -417,6 +439,9 @@ const UserDefinedItems: UserDefinedItem[] = [
 
 ```javascript
 
+import { setGlobalUserDefinedItems } from 'dataherd-raika';
+
+
 // 설정한 UserDefinedItems를 사용
 setGlobalUserDefinedItems(UserDefinedItems);
 
@@ -436,14 +461,17 @@ setGlobalUserDefinedItems(UserDefinedItems);
 
 ```javascript
 
+import { setLocalCustomDataGroup } from 'dataherd-raika';
+
+
 setLocalCustomDataGroup('clickEventCategoryA', [
     { name: 'categoryA-specific', type: 'string', options: ['Option1', 'Option2'] }
 ]);
 
 setLocalCustomDataGroup('clickEventCategoryB', [
     { name: 'categoryB-specific', type: 'number', options: [1, 10] }
-
 ]);
+
 ```
 
 <br/>
@@ -474,6 +502,12 @@ The trackClickEvent and trackKeywordEvent functions are used to track user click
 #### trackClickEvent Function
 
 <br/>
+
+```javascript
+
+    trackClickEvent(event, 'clickEventCategoryA', true, false, sendKeywordEventToServer);
+
+```
 
 - 매개변수:
 
@@ -538,12 +572,18 @@ The trackClickEvent and trackKeywordEvent functions are used to track user click
 ### 사용법: How To Use
 
 ```javascript
+
+import { trackClickEvent } from 'dataherd-raika';
+
+
 document.getElementById('elementA').addEventListener('click', (event) => {
     trackClickEvent(event, 'clickEventCategoryA', true, false);
 });
+
 document.getElementById('elementB').addEventListener('click', (event) => {
     trackClickEvent(event, 'clickEventCategoryB', false, true);
 });
+
 ```
 
 <br/>
@@ -618,6 +658,14 @@ document.getElementById('elementB').addEventListener('click', (event) => {
 
 <br/>
 
+```javascript
+
+trackKeywordEvent(keyword, 'search', true, true, 1, sendKeywordEventToServer);
+
+```
+
+<br/>
+
 - 매개변수:
 
 1. keyword: 이벤트와 관련된 키워드.
@@ -653,8 +701,8 @@ includeLocalCustomData 또는 includeGlobalCustomData가 선택되면 추가 커
 - How It Works:
 
 1. The function generates keyword event data for the specified number of times (userDefinedKeywordCount).
-2, It captures the keyword, event type, random timestamp, and the occurrence count of the keyword. If includeLocalCustomData or includeGlobalCustomData is selected, additional custom data is included.
-3, The collected data is passed to the provided callback function.
+2. It captures the keyword, event type, random timestamp, and the occurrence count of the keyword. If includeLocalCustomData or includeGlobalCustomData is selected, additional custom data is included.
+3. The collected data is passed to the provided callback function.
 
 <br/>
 <br/>
@@ -679,12 +727,16 @@ includeLocalCustomData 또는 includeGlobalCustomData가 선택되면 추가 커
 ### 사용법: How To Use
 
 ```javascript
+
+import { trackKeywordEvent } from 'dataherd-raika';
+
 function simulateKeywordEvent() {
     const keyword = "exampleKeyword";
-    trackKeywordEvent(keyword, 'search', true, 1, true);
+    trackKeywordEvent(keyword, 'search', true, true, 1);
 }
 
 simulateKeywordEvent();
+
 ```
 
 <br/>

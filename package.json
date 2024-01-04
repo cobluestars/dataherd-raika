@@ -1,7 +1,7 @@
 {
   "name": "dataherd-raika",
-  "description": "\"Dataherd-Raika is a cutting-edge library designed to simulate large-scale user behavior datasets. It takes a single user event (like a click or keyword input) and, by applying simple probability distributions and custom variables, expands it into a vast dataset.\"",
-  "version": "1.1.0",
+  "description": "\"Dataherd-Raika is a library designed to simulate large-scale user behavior datasets. It takes a single user event (like a click or keyword input) and, by applying simple probability distributions and custom variables, expands it into a vast dataset.\"",
+  "version": "1.1.2",
   "main": "./src/trackUserEvents.js",
   "types": "./src/trackUserEvents.d.ts",
   "icon": "./assets/dataherd-raika.png",
