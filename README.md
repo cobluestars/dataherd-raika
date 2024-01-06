@@ -12,6 +12,80 @@
 <br/>
 <br/>
 
+### 🐺 Ver 1.2.0: Shotgun Mode 🐺
+
+<br/>
+
+```javascript
+
+import { setShotgunMode } from 'dataherd-raika';
+
+setShotgunMode(true, 3000);
+// 3초의 시간대에 걸쳐서, 이벤트 추적 함수가 설정한 횟수만큼 분산적으로 발동됨.
+// Event tracking functions are triggered in a distributed manner over a period of 3 seconds.
+
+```
+
+<br/>
+
+    1. 초(seconds) 단위 시간대 설정
+    2. 설정 시간대 내에서, 이벤트 추적 함수가 설정한 횟수만큼 분산적으로 발동됨.
+
+<br/>
+
+    1. Timeframe set in seconds
+    2. Within the set timeframe, event tracking functions are triggered in a distributed manner as many times as set.
+
+<br/>
+<br/>
+
+    ＊ 현실적인 시나리오 모사:
+
+    - 실제 사용자 활동은 동시에 일어나기보다는, 특정 시간대에 걸쳐 분산되어 발생합니다.
+    - 샷건 모드를 통해 이러한 현실적인 사용자 활동 패턴을 모의할 수 있어,
+    더 현실적인 테스트 환경을 구성하는 것이 가능합니다.
+ 
+<br/>
+
+    * 성능 테스트 강화:
+
+    - 분산된 이벤트 발생은 서버와 클라이언트 측 성능에 대한 보다 정확한 테스트를 가능하게 합니다.
+    - 이는 피크 시간 동안의 서버 부하 및 클라이언트 측 처리 능력을 평가하는 데 유용할 수 있습니다.
+
+<br/>
+
+    * Realistic Scenario Simulation:
+
+    - Real user activities occur distributed over a certain period of time rather than simultaneously.
+    - Shotgun mode allows for the simulation of these realistic user activity patterns, enabling the creation of a more realistic testing environment.
+
+<br/>
+
+    * Enhanced Performance Testing:
+
+    - The distributed occurrence of events allows for more accurate testing of server and client-side performance.
+    - This can be useful for evaluating server load and client-side processing capabilities during peak times.
+
+<br/>
+<br/>
+
+#### ❗❗❗ 주의 ❗❗❗
+
+    - 샷건 모드로 인해 실제 이벤트 처리에 지연이 생겨, 사용자 이벤트 데이터가 제대로 저장되지 않을 수도 있습니다.
+    - 샷건 모드를 사용할 시, 이 점 유념하여 신중하게 사용하시길 바랍니다.
+    - 샷건 모드에서는 이벤트 처리가 비동기적으로 이루어지기 때문에, 이벤트가 예상대로 순차적으로 처리되지 않거나, 다른 비동기 프로세스와의 타이밍 문제로 인해 데이터가 올바르게 저장되지 않을 수 있습니다.
+
+<br/>
+
+#### ❗❗❗ Caution ❗❗❗
+
+    - The use of shotgun mode may cause delays in actual event processing, leading to user event data not being properly saved.
+    - Please use caution when using shotgun mode, keeping this in mind.
+    - In shotgun mode, event processing occurs asynchronously, meaning events may not be processed sequentially as expected or data may not be saved correctly due to timing issues with other asynchronous processes.
+
+<br/>
+<br/>
+
 ## 🐺사용법 & 예상 결과: How to Use & Expected Results🐺
 
 <br/>

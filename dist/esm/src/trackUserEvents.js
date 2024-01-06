@@ -434,6 +434,44 @@ function applyProbabilityBasedSelection(options, probabilities) {
     }
     return selectedOptions;
 }
+/** 🐺 Ver 1.2.0: Shotgun Mode 🐺
+ *  1. 초(seconds) 단위 시간대 설정
+ *  2. 설정 시간대 내에서, 이벤트 추적 함수가 설정한 횟수만큼 분산적으로 발동됨.
+ *
+ *  의의
+ *
+ *  - 현실적인 시나리오 모사:
+ *  실제 사용자 활동은 동시에 일어나기보다는, 특정 시간대에 걸쳐 분산되어 발생합니다.
+ *  샷건 모드를 통해 이러한 현실적인 사용자 활동 패턴을 모의할 수 있어,
+ *  더 현실적인 테스트 환경을 구성하는 것이 가능합니다.
+ *
+ *  - 성능 테스트 강화:
+ *  분산된 이벤트 발생은 서버와 클라이언트 측 성능에 대한 보다 정확한 테스트를 가능하게 합니다.
+ *  이는 피크 시간 동안의 서버 부하 및 클라이언트 측 처리 능력을 평가하는 데 유용할 수 있습니다.
+  */
+//샷건 모드의 전역변수 설정
+let shotgunMode = false;
+let shotgunInterval = 1000; //default: 1 seconds
+// 샷건 모드 및 설정 시간대 함수
+export function setShotgunMode(enable, interval) {
+    shotgunMode = enable;
+    shotgunInterval = interval;
+}
+//샷건 모드 실행 함수
+function executeEventsWithDelay(allEventData, callback) {
+    const eventIds = Object.keys(allEventData);
+    let index = 0;
+    function nextEvent() {
+        if (index < eventIds.length) {
+            //설정한 시간 내에서, 설정한 이벤트 추적 횟수만큼, eventData를 담은 콜백함수 실행
+            const eventId = eventIds[index];
+            callback({ [eventId]: allEventData[eventId] });
+            index++;
+            setTimeout(nextEvent, shotgunInterval);
+        }
+    }
+    nextEvent();
+}
 //사용자 클릭 이벤트 리스너 추적 함수 Click Event Listener
 export function trackClickEvent(event, eventType, includeLocalCustomData = false, includeGlobalCustomData = false, callback) {
     // eventData객체를 저장하기 위한 객체
@@ -462,9 +500,15 @@ export function trackClickEvent(event, eventType, includeLocalCustomData = false
         const eventId = `${event.type}_${i + 1}`; // 고유 식별자 생성
         allEventData[eventId] = eventData; // 객체에 생성된 eventData 저장
     }
-    // 콜백 함수 호출
-    if (callback) {
-        callback(allEventData);
+    // 샷건 모드 활성화 시,
+    if (shotgunMode && callback) {
+        executeEventsWithDelay(allEventData, callback);
+    }
+    else {
+        // 샷건 모드 비활성화 시, 그냥 콜백 함수 호출
+        if (callback) {
+            callback(allEventData);
+        }
     }
     console.log('Click Event Data:', allEventData);
 }
@@ -498,9 +542,15 @@ export function trackKeywordEvent(keyword, eventType, includeLocalCustomData = f
         const eventId = `${eventType}_${i + 1}`; // 고유 식별자 생성
         allEventData[eventId] = eventData; // 객체에 eventData 저장
     }
-    // 콜백 함수 호출
-    if (callback) {
-        callback(allEventData);
+    // 샷건 모드 활성화 시,
+    if (shotgunMode && callback) {
+        executeEventsWithDelay(allEventData, callback);
+    }
+    else {
+        // 샷건 모드 비활성화 시, 그냥 콜백 함수 호출
+        if (callback) {
+            callback(allEventData);
+        }
     }
     console.log('Keyword Event Data:', allEventData);
 }

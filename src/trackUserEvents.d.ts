@@ -113,6 +113,11 @@ declare module "dataherd-raika" {
     ): (  string | number | object )[]
 
 
+    /** 🐺 Ver 1.2.0: Shotgun Mode 🐺 */
+        // 샷건 모드 및 설정 시간대 함수
+    export function setShotgunMode(enable: boolean, interval: number): void
+
+
     /** 클릭 이벤트 추적 */
 
     // 시용자 클릭 이벤트 데이터 콜백 함수 타입 정의
