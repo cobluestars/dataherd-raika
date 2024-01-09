@@ -21,6 +21,7 @@ declare module "dataherd-raika" {
         startTime: string;
         endTime: string;
         peakTimes?: string[][];
+        peakTimeWeight: number;
     };
     
     //시간 설정 초기화 함수

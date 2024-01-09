@@ -24,7 +24,8 @@ function initializeTimestampSettings(settings) {
     TimestampSettings = {
         startTime: settings.startTime || now,
         endTime: settings.endTime || now,
-        peakTimes: settings.peakTimes
+        peakTimes: settings.peakTimes,
+        peakTimeWeight: settings.peakTimeWeight || 1.6 //default: *1.6
     };
 }
 exports.initializeTimestampSettings = initializeTimestampSettings;
@@ -32,66 +33,66 @@ exports.initializeTimestampSettings = initializeTimestampSettings;
 // 이 함수는 옵션으로 '피크 타임'을 지정할 수 있으며, 피크 타임 동안 타임스탬프가 생성될 확률이 높아짐.
 function getRandomTimestamp() {
     //TimestampSettings 직접 사용
-    var startTime = TimestampSettings.startTime, endTime = TimestampSettings.endTime, peakTimes = TimestampSettings.peakTimes;
+    var startTime = TimestampSettings.startTime, endTime = TimestampSettings.endTime, peakTimes = TimestampSettings.peakTimes, peakTimeWeight = TimestampSettings.peakTimeWeight;
     // 문자열로 된 날짜를 Date 객체로 파싱하는 함수
-    var parseDateTime = function (dateTimeStr) {
-        //UTC 기준으로 Date 객체 생성
-        return new Date(Date.parse(dateTimeStr + 'Z'));
-    };
+    var parseDateTime = function (dateTimeStr) { return new Date(Date.parse(dateTimeStr + 'Z')); };
+    //UTC 기준으로 Date 객체 생성
     var startDt = parseDateTime(startTime);
     var endDt = parseDateTime(endTime);
     // 시작 시간이 종료 시간보다 미래인 경우, 현재 시간을 사용함.
-    var now = new Date();
     if (startDt.getTime() > endDt.getTime()) {
-        startDt = now;
-        endDt = new Date(now.getTime() + 1000);
+        startDt = new Date();
+        endDt = new Date(startDt.getTime() + 1000); //1초 후를 endTime으로 설정
     }
-    // 피크 타임의 유효성 검사하는 함수
-    // 피크 타임은 시작 시간과 종료 시간 사이에 있어야 하며, 올바른 형식이어야 함.
-    /** ex)
-     *  start: '2023.01.02T00:00:00',
-     *  end: '2023.01.02T08:00:00',
-     *  picktime: [['2023.01.02T04:00:00', '2023.01.02T06:00:00'], ['2023.01.02T07:00:00', '2023.01.02T08:00:00']) */
-    var validatePeakTimes = function (peakTimes, start, end) {
-        if (!peakTimes)
-            return true;
-        if (!Array.isArray(peakTimes) || !peakTimes.every(function (pt) { return Array.isArray(pt) && pt.length === 2; }))
-            return false;
-        return peakTimes.every(function (_a) {
-            var startPt = _a[0], endPt = _a[1];
-            var peakStart = parseDateTime(startPt);
-            var peakEnd = parseDateTime(endPt);
-            return peakStart >= start && peakEnd <= end;
-        });
-    };
-    var validPeakTimes = peakTimes;
-    // 피크 타임이 유효하지 않은 시 콘솔 에러 출력, 피크 타임 없이 함수를 실행
-    if (validPeakTimes && !validatePeakTimes(validPeakTimes, startDt, endDt)) {
-        console.error("Invalid peak times format or out of range. Defaulting to random timestamp between start and end.");
-        validPeakTimes = undefined;
-    }
-    // 주어진 두 시간 사이에서 랜덤한 타임스탬프 생성
+    // 두 Date 객체 사이에서 랜덤하게 시간을 생성
     var getRandomDate = function (start, end) {
         var randomTime = start.getTime() + Math.random() * (end.getTime() - start.getTime());
         return new Date(randomTime);
     };
-    // 피크 타임이 없으면, 두 시간 사이에서 랜덤한 타임스탬프를 반환
-    if (!peakTimes) {
-        return getRandomDate(startDt, endDt);
-    }
-    // 피크 타임과 비피크 타임에 대한 간격과 가중치를 계산
-    var intervals = peakTimes.map(function (pt) { return [parseDateTime(pt[0]), parseDateTime(pt[1])]; });
+    // 피크 타임 배열이 없는 경우를 처리함
+    var validPeakTimes = peakTimes || [];
+    // 피크 타임을 각각 시작 시간과 종료 시간으로 분리해 인터벌 배열을 생성
+    var intervals = validPeakTimes.map(function (pt) { return [parseDateTime(pt[0]), parseDateTime(pt[1])]; });
+    // 전체 시간
     var totalDuration = endDt.getTime() - startDt.getTime();
-    var peakWeights = intervals.map(function (_a) {
+    // 피크/비피크 시간의 총 길이 계산
+    var peakTotalDuration = intervals.reduce(function (sum, _a) {
         var start = _a[0], end = _a[1];
-        return ((end.getTime() - start.getTime()) / totalDuration) * 10;
-    });
-    var nonPeakWeight = Math.max(1, 10 - peakWeights.reduce(function (a, b) { return a + b; }, 0));
-    intervals.push([startDt, endDt]);
-    peakWeights.push(nonPeakWeight);
-    // 가중치를 고려하여 랜덤하게 간격을 선택하고, 해당 간격 내에서 타임스탬프를 생성
-    var chosenInterval = intervals[Math.floor(Math.random() * intervals.length)];
-    return getRandomDate(chosenInterval[0], chosenInterval[1]);
+        return sum + (end.getTime() - start.getTime());
+    }, 0);
+    var nonPeakTotalDuration = totalDuration - peakTotalDuration;
+    //가중치 없는 경우 디폴트: 1.6배 적용
+    var actualPeakTimeWeight = peakTimeWeight || 1.6;
+    // 피크 시간의 확률을 계산하고 가중치를 적용
+    var peakProbability = peakTotalDuration / totalDuration;
+    var nonPeakProbability = nonPeakTotalDuration / totalDuration;
+    // 가중치 조정
+    peakProbability = peakProbability * actualPeakTimeWeight / (peakProbability * actualPeakTimeWeight + nonPeakProbability);
+    nonPeakProbability = 1 - peakProbability;
+    // 랜덤 확률에 따라 피크 시간대 또는 비피크 시간대에서 날짜 선택
+    if (Math.random() < peakProbability) {
+        var chosenPeakInterval = intervals[Math.floor(Math.random() * intervals.length)];
+        return getRandomDate(chosenPeakInterval[0], chosenPeakInterval[1]);
+    }
+    else {
+        var nonPeakIntervals = [];
+        var lastEnd = startDt;
+        // 비피크 시간대 계산
+        for (var _i = 0, intervals_1 = intervals; _i < intervals_1.length; _i++) {
+            var interval = intervals_1[_i];
+            if (lastEnd < interval[0]) {
+                nonPeakIntervals.push([lastEnd, interval[0]]);
+            }
+            lastEnd = interval[1];
+        }
+        // 남은 시간을 비피크 시간대로 추가
+        if (lastEnd < endDt) {
+            nonPeakIntervals.push([lastEnd, endDt]);
+        }
+        // 비피크 시간대에서 랜덤한 시간 선택
+        var chosenNonPeakInterval = nonPeakIntervals[Math.floor(Math.random() * nonPeakIntervals.length)];
+        return getRandomDate(chosenNonPeakInterval[0], chosenNonPeakInterval[1]);
+    }
 }
 exports.getRandomTimestamp = getRandomTimestamp;
 /**
@@ -492,9 +493,13 @@ function executeEventsWithDelay(allEventData, callback) {
         if (index < eventIds.length) {
             //설정한 시간 내에서, 설정한 이벤트 추적 횟수만큼, eventData를 담은 콜백함수 실행
             var eventId = eventIds[index];
+            //'샷건 발포' 시, 시간 범위 내 랜덤하게 찍힌 타임스탬프들 측정: 콜백 함수 호출 시 현재 시간을 로깅
+            //console.log('Executing event ${evemtId} at ${new Date().toISOString()}');
             callback((_a = {}, _a[eventId] = allEventData[eventId], _a));
             index++;
             setTimeout(nextEvent, shotgunInterval);
+            // } else {
+            //     console.log('All events executed in shotgun mode');
         }
     }
     nextEvent();

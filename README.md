@@ -108,6 +108,7 @@ type TimestampSettings = {
     startTime: string;
     endTime: string;
     peakTimes?: string[][];
+    peakTimeWeight: number;    //Peak Time Weight: (Default: * 1.6)
 };
 
 // TimestampSettings 객체 초기화
@@ -115,9 +116,10 @@ const timestampSettings: TimestampSettings = {
     startTime: '2024-01-01T00:00:00',
     endTime: '2024-01-01T08:00:00',
     peakTimes: [
-        ['2024-01-01T04:00:00', '2024-01-01T06:00:00'],
-        ['2024-01-01T07:00:00', '2024-01-01T08:00:00']
-    ]
+        ['2024-01-01T02:00:00', '2024-01-01T03:00:00'],
+        ['2024-01-01T05:00:00', '2024-01-01T06:00:00']
+    ],
+    peakTimeWeight: 2   //Peak Time Weight
 };
 
 ```
@@ -127,7 +129,9 @@ const timestampSettings: TimestampSettings = {
 
 - peakTimes는 특정 시간대에 타임스탬프 생성 확률을 높이기 위한 설정입니다. 각 피크 타임은 시작 및 종료 시간의 문자열 배열로 정의됩니다.
 
-- 위 예시에서는 2024년 1월 1일 자정부터 오전 8시 사이에 타임스탬프를 생성하도록 설정하며, 오전 4시부터 6시, 그리고 7시부터 8시 사이에 타임스탬프 생성 확률이 높아지도록 피크 타임을 설정합니다.
+- 위 예시에서는 2024년 1월 1일 자정부터 오전 8시 사이에 타임스탬프를 생성하도록 설정하며, 오전 2시부터 3시, 그리고 5시부터 6시 사이에 타임스탬프 생성 확률이 2배 높아지도록 피크 타임을 설정합니다.
+
+- 🐺 Ver 1.2.5: 피크타임 가중치 조정 🐺: 웬만하면 위 예시처럼 피크타임을 startTime ~ endTime 사이에서 균등하게 분배해 주세요. 특정 시간대에 몰아서 피크 타임을 설정할 시, 가중치가 비정상적으로 높아집니다. 추후 해당 문제를 해결해보도록 하겠습니다.
 
 <br/>
 
@@ -135,7 +139,9 @@ const timestampSettings: TimestampSettings = {
 
 - peakTimes is an optional setting to increase the probability of generating timestamps during specific time intervals. Each peak time interval is defined by an array of start and end time strings.
 
-- In the example above, the timestamp will be generated between midnight and 8 AM on January 1, 2024, with increased probability of generating timestamps between 4 AM to 6 AM and 7 AM to 8 AM.
+- In the example above, the timestamp will be generated between midnight and 8 AM on January 1, 2024, with increased probability (twice) of generating timestamps between 4 AM to 6 AM and 7 AM to 8 AM.
+
+- 🐺 Version 1.2.5: Adjusted Peak Time Weight 🐺: Whenever possible, please distribute peak times evenly between the start time and end time. Setting peak times concentrated in specific time periods can result in abnormally high weightings. I will look into resolving this issue in the future.
 
 <br/>
 
