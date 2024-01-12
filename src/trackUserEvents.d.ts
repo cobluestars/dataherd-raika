@@ -61,6 +61,9 @@ declare module "dataherd-raika" {
 
         /**🐺 Ver 1.1.0: 캐시 데이터 설정을 위한 타입 🐺*/
         cacheSettings?: CacheDataSettings; // 캐시 데이터 설정
+
+        /**🐺 Ver 1.3.0: 컨텍스트(맥락)에 기반한 조건부 옵션 제공 🐺*/
+        contextBasedOptions?: (context: any) => any; //콘텍스트(맥락: 특정 커스텀 데이터의 options 값에 영향을 끼치는, 또다른 커스텀 데이터 객체)
     }
 
     //확률 설정을 위한 타입

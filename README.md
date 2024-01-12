@@ -10,80 +10,104 @@
 "Dataherd-Raika is a cutting-edge library designed to simulate large-scale user behavior datasets. It takes a single user event (like a click or keyword input) and, by applying simple probability distributions and custom variables, expands it into a vast dataset."
 
 <br/>
+<hr/>
 <br/>
 
-### 🐺 Ver 1.2.0: Shotgun Mode 🐺
+### 🐺 Ver 1.3.0: 컨텍스트(맥락)에 기반한 조건부 옵션 제공 🐺
+### 🐺 Ver 1.3.0: Provides context-based conditional options 🐺
 
+<br/>
+
+``` typescript
+
+//커스텀 데이터 항목 타입, Custom data type
+type UserDefinedItem = {                                   
+    /**🐺 Ver 1.3.0: 컨텍스트(맥락)에 기반한 조건부 옵션 제공 🐺
+     *                Provides context-based conditional options */
+    contextBasedOptions?: (context: any) => any;
+};
+
+```
 <br/>
 
 ```javascript
 
-import { setShotgunMode } from 'dataherd-raika';
-
-setShotgunMode(true, 3000);
-// 3초의 시간대에 걸쳐서, 이벤트 추적 함수가 설정한 횟수만큼 분산적으로 발동됨.
-// Event tracking functions are triggered in a distributed manner over a period of 3 seconds.
+{
+    name: 'developer',
+    type: 'array',
+    options: [
+        {
+            name: 'age',
+            type: 'number',
+            distribution: 'normal',
+            mean: 40,
+            options: [20, 60]
+        },
+        {
+            name: 'salary',
+            type: 'number',
+            contextBasedOptions: (context) => {
+                if (context.age < 30) {
+                    return {
+                        options: [20000, 40000],
+                        distribution: 'normal',
+                        mean: 27000
+                    };
+                } else {
+                    return {
+                        options: [30000, 100000],
+                        distribution: 'normal',
+                        mean: 40000
+                    };
+                }
+            }
+        }
+    ]
+},
 
 ```
+<br/>
+
+- contextBasedOptions는 사용자 정의 데이터 항목에 대해 동적으로 값을 생성할 수 있는 기능을 제공합니다. 이 기능은 다른 항목의 값으로 특정 데이터 항목의 값에 영향을 주고 싶을 때 유용합니다. 예를 들어, 사용자의 연령대(age)에 따라 '급여(salary)' 데이터의 스펙트럼을 다르게 설정할 수 있습니다.
 
 <br/>
 
-    1. 초(seconds) 단위 시간대 설정
-    2. 설정 시간대 내에서, 이벤트 추적 함수가 설정한 횟수만큼 분산적으로 발동됨.
+- contextBasedOptions provides the capability to dynamically generate values for user-defined data items. This feature is useful when you want the value of a certain data item to be influenced by the values of other items. For example, you can set different spectrums for 'salary' data based on the user's age group.
 
 <br/>
 
-    1. Timeframe set in seconds
-    2. Within the set timeframe, event tracking functions are triggered in a distributed manner as many times as set.
-
-<br/>
-<br/>
-
-    ＊ 현실적인 시나리오 모사:
-
-    - 실제 사용자 활동은 동시에 일어나기보다는, 특정 시간대에 걸쳐 분산되어 발생합니다.
-    - 샷건 모드를 통해 이러한 현실적인 사용자 활동 패턴을 모의할 수 있어,
-    더 현실적인 테스트 환경을 구성하는 것이 가능합니다.
- 
-<br/>
-
-    * 성능 테스트 강화:
-
-    - 분산된 이벤트 발생은 서버와 클라이언트 측 성능에 대한 보다 정확한 테스트를 가능하게 합니다.
-    - 이는 피크 시간 동안의 서버 부하 및 클라이언트 측 처리 능력을 평가하는 데 유용할 수 있습니다.
+#### 사용법: How to Use
 
 <br/>
 
-    * Realistic Scenario Simulation:
+``` typescript
 
-    - Real user activities occur distributed over a certain period of time rather than simultaneously.
-    - Shotgun mode allows for the simulation of these realistic user activity patterns, enabling the creation of a more realistic testing environment.
+//커스텀 데이터 항목 타입, Custom data type
+type UserDefinedItem = {                                   
+    /**🐺 Ver 1.3.0: 컨텍스트(맥락)에 기반한 조건부 옵션 제공 🐺
+     *                Provides context-based conditional options */
+    contextBasedOptions?: (context: any) => any;
+};
+
+```
+<br/>
+
+- UserDefinedItem 타입의 contextBasedOptions 속성을 함수로 정의하여 사용합니다. 이 함수는 context 객체를 매개변수로 받으며, 이 context는 다른 데이터 항목들의 현재 값들을 포함합니다.
+
+- 매개변수 context: 현재 데이터 상태를 나타내는 객체입니다. 이 객체를 사용하여 다른 데이터 항목들의 값에 접근하고, 그에 따라 조건부 로직을 실행할 수 있습니다.
+
+- 보다 자세한 사용법은, '3. 커스텀 데이터 설정: Setting Custom Data'의 '사용법'을 참조하세요!
 
 <br/>
 
-    * Enhanced Performance Testing:
+- The contextBasedOptions property of the UserDefinedItem type is defined as a function. This function takes a context object as a parameter, which includes the current values of other data items.
 
-    - The distributed occurrence of events allows for more accurate testing of server and client-side performance.
-    - This can be useful for evaluating server load and client-side processing capabilities during peak times.
+- Parameter context: This is an object representing the current data state. You can use this object to access the values of other data items and execute conditional logic based on them.
 
-<br/>
-<br/>
-
-#### ❗❗❗ 주의 ❗❗❗
-
-    - 샷건 모드로 인해 실제 이벤트 처리에 지연이 생겨, 사용자 이벤트 데이터가 제대로 저장되지 않을 수도 있습니다.
-    - 샷건 모드를 사용할 시, 이 점 유념하여 신중하게 사용하시길 바랍니다.
-    - 샷건 모드에서는 이벤트 처리가 비동기적으로 이루어지기 때문에, 이벤트가 예상대로 순차적으로 처리되지 않거나, 다른 비동기 프로세스와의 타이밍 문제로 인해 데이터가 올바르게 저장되지 않을 수 있습니다.
+- For more detailed usage instructions, refer to '3. 커스텀 데이터 설정: Setting Custom Data' in the 'How To Use' section!
 
 <br/>
-
-#### ❗❗❗ Caution ❗❗❗
-
-    - The use of shotgun mode may cause delays in actual event processing, leading to user event data not being properly saved.
-    - Please use caution when using shotgun mode, keeping this in mind.
-    - In shotgun mode, event processing occurs asynchronously, meaning events may not be processed sequentially as expected or data may not be saved correctly due to timing issues with other asynchronous processes.
-
-<br/>
+<hr/>
 <br/>
 
 ## 🐺사용법 & 예상 결과: How to Use & Expected Results🐺
@@ -288,12 +312,15 @@ type UserDefinedItem = {
                                        // Whether to randomly select within the chosen number of items 
                                        // (e.g., If selection items: 3, then 1 to 3 items can be selected.) (default: 1)
 
-    /** 🐺 Ver 1.1.0: 캐시 데이터 설정을 위한 타입
-     *                Type for Cache Data Settings 🐺 */
+    /** 🐺 Ver 1.1.0: 캐시 데이터 설정을 위한 타입 🐺
+     *                Type for Cache Data Settings */
 
     cacheSettings?: CacheDataSettings; // 캐시 데이터 설정
                                        // Cache Data Settings
                                    
+    /**🐺 Ver 1.3.0: 컨텍스트(맥락)에 기반한 조건부 옵션 제공 🐺
+     *                Provides context-based conditional options */
+    contextBasedOptions?: (context: any) => any;
 };
 
 // 확률 설정을 위한 타입
@@ -348,7 +375,7 @@ const UserDefinedItems: UserDefinedItem[] = [
 
 import { UserDefinedItem } from 'dataherd-raika';
 
-const UserDefinedItems: UserDefinedItem[] = [
+const GlobalUserDefinedItems: UserDefinedItem[] = [
     {
         name: 'job',
         type: 'array',
@@ -365,7 +392,15 @@ const UserDefinedItems: UserDefinedItem[] = [
                             {
                                 name: 'salary',
                                 type: 'number',
-                                options: [8000, 20000]
+                                options: [8000, 20000],
+                                contextBasedOptions: (context) => {
+                                    const rareCaseProbability = 0.001
+                                    if (Math.random() < rareCaseProbability) {
+                                        return {
+                                            options: [20000, 100000] //Salary with 0.1% probability: 20000 to 100000
+                                        }
+                                    }
+                                }
                             }
                         ]
                     },
@@ -376,14 +411,28 @@ const UserDefinedItems: UserDefinedItem[] = [
                             {
                                 name: 'age',
                                 type: 'number',
+                                distribution: 'normal',
+                                mean: 40,
                                 options: [20, 60]
                             },
                             {
                                 name: 'salary',
                                 type: 'number',
-                                distribution: 'normal',
-                                mean: 50000,
-                                options: [40000, 100000]
+                                contextBasedOptions: (context) => {
+                                    if (context.age < 30) {
+                                        return {
+                                            options: [20000, 40000],
+                                            distribution: 'normal',
+                                            mean: 27000
+                                        };
+                                    } else {
+                                        return {
+                                            options: [30000, 100000],
+                                            distribution: 'normal',
+                                            mean: 40000
+                                        };
+                                    }
+                                }
                             }
                         ]
                     },
@@ -394,24 +443,37 @@ const UserDefinedItems: UserDefinedItem[] = [
                             {
                                 name: 'age',
                                 type: 'number',
+                                distribution: 'normal',
+                                mean: 40,
                                 options: [20, 60]
                             },
                             {
                                 name: 'salary',
                                 type: 'number',
-                                distribution: 'normal',
-                                mean: 50000,
-                                options: [40000, 100000]
+                                contextBasedOptions: (context) => {
+                                    if (context.age < 30) {
+                                        return {
+                                            options: [25000, 40000],
+                                            distribution: 'normal',
+                                            mean: 30000
+                                        };
+                                    } else {
+                                        return {
+                                            options: [30000, 100000],
+                                            distribution: 'normal',
+                                            mean: 40000
+                                        };
+                                    }
+                                }
                             }
                         ]
                     }
                 ],
         randomizeArrays: true,
         selectionProbability: true,
-        probabilitySettings: [
-            { identifier: 0, probability: 10 }, //(10%: student)
-            { identifier: 1, probability: 45 }, //(45%: developer)
-            { identifier: 2, probability: 45 }, //(45%: accountant)
+        probabilitySetting: [
+            { identifier: 1, probability: 45 }, //(45% 확률로 developer 선택)
+            { identifier: 2, probability: 45 }, //(45% 확률로 accountant 선택)
         ],
     },
     {
@@ -932,6 +994,82 @@ This process can be used to track user interactions in real-time, store data in 
 Since the data is stored in JSON format, it can be easily integrated, visualized, and analyzed with data analysis tools or dashboards. For example, it can be integrated with various platforms such as Google Analytics, Google BigQuery, AWS QuickSight, etc.
 
 <br/>
+<hr/>
+<br/>
+
+### 🐺 Ver 1.2.0: Shotgun Mode 🐺
+
+<br/>
+
+```javascript
+
+import { setShotgunMode } from 'dataherd-raika';
+
+setShotgunMode(true, 3000);
+// 3초의 시간대에 걸쳐서, 이벤트 추적 함수가 설정한 횟수만큼 분산적으로 발동됨.
+// Event tracking functions are triggered in a distributed manner over a period of 3 seconds.
+
+```
+
+<br/>
+
+    1. 초(seconds) 단위 시간대 설정
+    2. 설정 시간대 내에서, 이벤트 추적 함수가 설정한 횟수만큼 분산적으로 발동됨.
+
+<br/>
+
+    1. Timeframe set in seconds
+    2. Within the set timeframe, event tracking functions are triggered in a distributed manner as many times as set.
+
+<br/>
+<br/>
+
+    ＊ 현실적인 시나리오 모사:
+
+    - 실제 사용자 활동은 동시에 일어나기보다는, 특정 시간대에 걸쳐 분산되어 발생합니다.
+    - 샷건 모드를 통해 이러한 현실적인 사용자 활동 패턴을 모의할 수 있어,
+    더 현실적인 테스트 환경을 구성하는 것이 가능합니다.
+ 
+<br/>
+
+    * 성능 테스트 강화:
+
+    - 분산된 이벤트 발생은 서버와 클라이언트 측 성능에 대한 보다 정확한 테스트를 가능하게 합니다.
+    - 이는 피크 시간 동안의 서버 부하 및 클라이언트 측 처리 능력을 평가하는 데 유용할 수 있습니다.
+
+<br/>
+
+    * Realistic Scenario Simulation:
+
+    - Real user activities occur distributed over a certain period of time rather than simultaneously.
+    - Shotgun mode allows for the simulation of these realistic user activity patterns, enabling the creation of a more realistic testing environment.
+
+<br/>
+
+    * Enhanced Performance Testing:
+
+    - The distributed occurrence of events allows for more accurate testing of server and client-side performance.
+    - This can be useful for evaluating server load and client-side processing capabilities during peak times.
+
+<br/>
+<br/>
+
+#### ❗❗❗ 주의 ❗❗❗
+
+    - 샷건 모드로 인해 실제 이벤트 처리에 지연이 생겨, 사용자 이벤트 데이터가 제대로 저장되지 않을 수도 있습니다.
+    - 샷건 모드를 사용할 시, 이 점 유념하여 신중하게 사용하시길 바랍니다.
+    - 샷건 모드에서는 이벤트 처리가 비동기적으로 이루어지기 때문에, 이벤트가 예상대로 순차적으로 처리되지 않거나, 다른 비동기 프로세스와의 타이밍 문제로 인해 데이터가 올바르게 저장되지 않을 수 있습니다.
+
+<br/>
+
+#### ❗❗❗ Caution ❗❗❗
+
+    - The use of shotgun mode may cause delays in actual event processing, leading to user event data not being properly saved.
+    - Please use caution when using shotgun mode, keeping this in mind.
+    - In shotgun mode, event processing occurs asynchronously, meaning events may not be processed sequentially as expected or data may not be saved correctly due to timing issues with other asynchronous processes.
+
+<br/>
+<hr/>
 <br/>
 
 ### 종합: Summary
